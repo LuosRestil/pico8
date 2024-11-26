@@ -31,6 +31,9 @@ function _update()
 	if btnp(⬅️) and can_move("l") then
 		move_piece("l")
 	end
+	if btnp(🅾️) then
+		rot_piece()
+	end
 end
 
 function _draw()
@@ -57,7 +60,9 @@ function _draw()
 	for c in all(brd_coords()) do
 		local x=(c[1]-1)*pcsz+xpad
 		local y=(c[2]-1)*pcsz+ypad
-		sspr(spr_pos,0,6,6,x,y)
+		if y>=0 then
+			sspr(spr_pos,0,6,6,x,y)
+		end
 	end
 end
 -->8
@@ -78,14 +83,16 @@ function init_pieces()
 		--left zig
 		{
 			vars={
-				{{0,0},{1,0},{1,1},{2,1}}
+				{{0,0},{1,0},{1,1},{2,1}},
+				{{2,-1},{1,0},{2,0},{1,1}}
 			},
 			col=3
 		},
 		--right zig
 		{
 			vars={
-				{{1,0},{2,0},{0,1},{1,1}}
+				{{1,0},{2,0},{0,1},{1,1}},
+				{{1,-1},{1,0},{2,0},{2,1}}
 			},
 			col=2
 		},
@@ -99,7 +106,8 @@ function init_pieces()
 		--stick
 		{
 		 vars={
-		 	{{0,0},{1,0},{2,0},{3,0}}
+		 	{{0,0},{1,0},{2,0},{3,0}},
+		 	{{1,1},{1,0},{1,-1},{1,-2}}
 		 },
 		 col=1,
 		 shiftl=true
@@ -107,21 +115,30 @@ function init_pieces()
 		--tri
 		{
 			vars={
-				{{0,0},{1,0},{2,0},{1,1}}
+				{{0,0},{1,0},{2,0},{1,1}},
+				{{1,-1},{0,0},{1,0},{1,1}},
+				{{1,-1},{0,0},{1,0},{2,0}},
+				{{1,-1},{1,0},{2,0},{1,1}},
 			},
 			col=1
 		},
 		--left ell
 		{
 			vars={
-				{{0,0},{1,0},{2,0},{0,1}}
+				{{0,0},{1,0},{2,0},{0,1}},
+				{{0,-1},{1,-1},{1,0},{1,1}},
+				{{2,-1},{0,0},{1,0},{2,0}},
+				{{1,-1},{1,0},{1,1},{2,1}}
 			},
 			col=3
 		},
 		--right ell
 		{
 			vars={
-				{{0,0},{1,0},{2,0},{2,1}}
+				{{0,0},{1,0},{2,0},{2,1}},
+				{{1,-1},{1,0},{0,1},{1,1}},
+				{{0,-1},{0,0},{1,0},{2,0}},
+				{{1,-1},{2,-1},{1,0},{1,1}}
 			},
 			col=2
 		}
@@ -227,6 +244,16 @@ function can_move(dir)
 		end
 		return true
 	end
+end
+
+function rot_piece()
+	local orig_var=piece.variant
+	piece.variant+=1
+	if piece.variant>#piece.vars then
+		piece.variant=1
+	end
+	--todo figure out rot rules
+	--when new pos is occupied
 end
 
 
