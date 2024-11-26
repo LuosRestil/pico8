@@ -6,7 +6,9 @@ local w=10
 local h=20
 local xpad=34
 local ypad=4
-local fr=0.1 --fall rate
+local slow_fr=0.6
+local fast_fr=0.05
+local fr=0.6 --fall rate
 local ft=0 --fall timer
 local lt=0 --last time
 
@@ -21,10 +23,24 @@ function _update()
 	local dt=now-lt
 	lt=now
 	ft+=dt
+	
+	local new_fr=nil
+	if btn(⬇️) then
+		new_fr=fast_fr
+	else
+		new_fr=slow_fr
+	end
+	
+	if new_fr~=fr then
+		fr=new_fr
+		ft=0
+	end
+	
 	if ft>fr then
 		ft-=fr
 		drop_piece()
 	end
+	
 	if btnp(➡️) and can_move("r") then
 		move_piece("r")
 	end
@@ -190,7 +206,6 @@ function brd_coords()
 		x=s[1]+piece.loc[1]
 		y=s[2]+piece.loc[2]
 		add(coords,{x,y})
-		msg="x:"..x..",y:"..y
 	end
 	return coords
 end
@@ -249,7 +264,7 @@ end
 function rot_piece()
 	local orig_var=piece.variant
 	piece.variant+=1
-	if piece.variant>#piece.vars then
+	if piece.variant>#piece.shape.vars then
 		piece.variant=1
 	end
 	--todo figure out rot rules
