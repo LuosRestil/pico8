@@ -84,6 +84,21 @@ function _draw()
 	if trigger_game_over then
 		game_over=true
 	end
+	
+	--next piece
+	rectfill(96,4,126,36)
+	print("next",104,8,7)
+	col=next_piece.shape.col-1
+	spr_pos=16+col*6
+	local pc=next_piece
+	local shp=pc.shape
+	local vars=shp.vars
+	local v=vars[1]
+	for b in all(v) do
+		local x=(b[1]-1)*pcsz+108+shp.np_pad[1]
+		local y=(b[2]-1)*pcsz+25+shp.np_pad[2]
+		sspr(spr_pos,0,6,6,x,y)
+	end
 end
 -->8
 --board
@@ -106,7 +121,8 @@ function init_pieces()
 				{{0,0},{1,0},{1,1},{2,1}},
 				{{2,-1},{1,0},{2,0},{1,1}}
 			},
-			col=3
+			col=3,
+			np_pad={0,0}
 		},
 		--right zig
 		{
@@ -114,14 +130,16 @@ function init_pieces()
 				{{1,0},{2,0},{0,1},{1,1}},
 				{{1,-1},{1,0},{2,0},{2,1}}
 			},
-			col=2
+			col=2,
+			np_pad={0,0}
 		},
 		--box
 		{
 			vars={
 				{{0,0},{1,0},{0,1},{1,1}}
 			},
-			col=1
+			col=1,
+			np_pad={4,0}
 		},
 		--stick
 		{
@@ -130,6 +148,7 @@ function init_pieces()
 		 	{{1,1},{1,0},{1,-1},{1,-2}}
 		 },
 		 col=1,
+		 np_pad={-2,3},
 		 shiftl=true
 		},
 		--tri
@@ -140,7 +159,8 @@ function init_pieces()
 				{{1,-1},{0,0},{1,0},{2,0}},
 				{{1,-1},{1,0},{2,0},{1,1}},
 			},
-			col=1
+			col=1,
+			np_pad={1,0},
 		},
 		--left ell
 		{
@@ -150,7 +170,8 @@ function init_pieces()
 				{{2,-1},{0,0},{1,0},{2,0}},
 				{{1,-1},{1,0},{1,1},{2,1}}
 			},
-			col=3
+			col=3,
+			np_pad={0,0}
 		},
 		--right ell
 		{
@@ -160,7 +181,8 @@ function init_pieces()
 				{{0,-1},{0,0},{1,0},{2,0}},
 				{{1,-1},{2,-1},{1,0},{1,1}}
 			},
-			col=2
+			col=2,
+			np_pad={0,0}
 		}
 	}
 
