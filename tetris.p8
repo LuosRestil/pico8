@@ -16,11 +16,12 @@ game_over=false
 trigger_line_destroy=false
 line_destroy=false
 local ld_timer=0
-local ld_dur=1
+local ld_dur=0.5
 
 function _init()
 	cls()
 	map(0)
+	init_board()
 	init_pieces()
 end
 
@@ -68,6 +69,7 @@ function _update()
 	end
 	
 	check_lines()
+	
 	if #to_destroy>0 then
 		trigger_line_destroy=true
 	end
@@ -93,7 +95,7 @@ function _draw()
 	--board
 	for i=1,h do
 		for j=1,w do
-			if brd[i][j] ~= 0 then
+			if brd[i][j]~=0 then
 				local col=brd[i][j]-1
 				local x=(j-1)*pcsz+xpad
 				local y=(i-1)*pcsz+ypad
@@ -139,16 +141,22 @@ function _draw()
 end
 -->8
 --board
-brd={}
-for i=1,20 do
-	local row={}
-	for j=1,10 do
-		add(row,0)
-	end
-	add(brd,row)
+function init_board()
+	brd=new_board()
+	to_destroy={}
 end
 
-to_destroy={}
+function new_board()
+	local nb={}
+	for i=1,20 do
+		local row={}
+		for j=1,10 do
+			add(row,0)
+		end
+		add(nb,row)
+	end
+	return nb
+end
 
 function check_lines()
 	for row=1,#brd do
@@ -157,6 +165,7 @@ function check_lines()
 				goto continue
 			end
 		end
+		--todo use set?
 		add(to_destroy,row)
 		::continue::
 	end
@@ -165,7 +174,7 @@ end
 --todo this seems inefficient
 function decay_lines()
 	for row in all(to_destroy) do
-		for i=1,20 do
+		for i=1,30 do
 			local x=rnd(10*pcsz)+xpad
 			local y=rnd(6)+ypad+(row-1)*pcsz
 			pset(x,y,0)
@@ -174,7 +183,21 @@ function decay_lines()
 end
 
 function fill_destroyed()
-	
+	local nb=new_board()
+	for i=1,20 do
+		local shift=0
+		for row in all(to_destroy) do
+			if row==i then
+				goto continue
+			end
+			if (row>i) shift+=1
+		end
+
+		nb[i+shift]=brd[i]
+		::continue::
+	end
+	to_destroy={}
+	brd=nb
 end
 -->8
 --pieces
