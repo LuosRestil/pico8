@@ -1,18 +1,22 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
-local pcsz=6
-local w=10
-local h=20
-local xpad=34
-local ypad=4
+local pcsz=6 --piece size
+local w=10 --board width
+local h=20 --board height
+local xpad=34 --board marg. l
+local ypad=4 --board marg. top
+local fr=0.6 --fall rate
 local slow_fr=0.6
 local fast_fr=0.05
-local fr=0.6 --fall rate
 local ft=0 --fall timer
 local lt=0 --last time
 trigger_game_over=false
 game_over=false
+trigger_line_destroy=false
+line_destroy=false
+local ld_timer=0
+local ld_dur=1
 
 function _init()
 	cls()
@@ -22,9 +26,24 @@ end
 
 function _update()
 	if game_over then return end
+	
 	local now=time()
 	local dt=now-lt
 	lt=now
+	
+	if line_destroy then
+		ld_timer+=dt
+		if ld_timer>ld_dur then
+			ld_timer=0
+			ft=0
+			line_destroy=false
+			fill_destroyed()
+		else
+			decay_lines()
+		end
+		return
+	end
+	
 	ft+=dt
 	
 	if btn(⬇️) then
@@ -47,19 +66,30 @@ function _update()
 	if btnp(🅾️) then
 		rot_piece()
 	end
+	
+	check_lines()
+	if #to_destroy>0 then
+		trigger_line_destroy=true
+	end
 end
 
 function _draw()
+	if line_destroy then return end
+
 	--clear bg
  rectfill(xpad,ypad,xpad+pcsz*w,ypad+pcsz*h,0)
+	
+	--game over
 	if game_over then
 		print("game over",47,64,8)
 		return
 	end
+	
 	--debugging
 	if msg ~= nil then
 		print(msg,xpad,ypad,9)
 	end
+	
 	--board
 	for i=1,h do
 		for j=1,w do
@@ -71,6 +101,7 @@ function _draw()
 			end
 		end
 	end
+	
 	--piece
 	local col=piece.shape.col-1
 	local spr_pos=16+col*6
@@ -80,9 +111,6 @@ function _draw()
 		if y>=0 then
 			sspr(spr_pos,0,6,6,x,y)
 		end
-	end
-	if trigger_game_over then
-		game_over=true
 	end
 	
 	--next piece
@@ -99,6 +127,15 @@ function _draw()
 		local y=(b[2]-1)*pcsz+25+shp.np_pad[2]
 		sspr(spr_pos,0,6,6,x,y)
 	end
+	
+	if trigger_line_destroy then
+		line_destroy=true
+		trigger_line_destroy=false
+	end
+	
+	if trigger_game_over then
+		game_over=true
+	end
 end
 -->8
 --board
@@ -111,6 +148,34 @@ for i=1,20 do
 	add(brd,row)
 end
 
+to_destroy={}
+
+function check_lines()
+	for row=1,#brd do
+		for col in all(brd[row]) do
+			if col==0 then
+				goto continue
+			end
+		end
+		add(to_destroy,row)
+		::continue::
+	end
+end
+
+--todo this seems inefficient
+function decay_lines()
+	for row in all(to_destroy) do
+		for i=1,20 do
+			local x=rnd(10*pcsz)+xpad
+			local y=rnd(6)+ypad+(row-1)*pcsz
+			pset(x,y,0)
+		end
+	end
+end
+
+function fill_destroyed()
+	
+end
 -->8
 --pieces
 function init_pieces()
