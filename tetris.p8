@@ -26,14 +26,9 @@ function _update()
 	
 	local new_fr=nil
 	if btn(⬇️) then
-		new_fr=fast_fr
+		fr=fast_fr
 	else
-		new_fr=slow_fr
-	end
-	
-	if new_fr~=fr then
-		fr=new_fr
-		ft=0
+		fr=slow_fr
 	end
 	
 	if ft>fr then
@@ -217,10 +212,14 @@ function piece_can_drop()
 		if y==20 then
 			return false
 		end
+		if coord[2]<1 then
+			goto continue
+		end
 		local blw=brd[coord[2]+1][coord[1]]
 		if blw~=0 and blw~=999 then
 			return false
 		end
+		::continue::
 	end
 	return true
 end
@@ -240,25 +239,32 @@ function can_move(dir)
 			if x==1 then
 				return false
 			end
+			if c[2]<1 then
+				goto continue 
+			end
 			local blw=brd[c[2]][c[1]-1]
 			if blw~=0 then
 				return false
 			end
+			::continue::
 		end
-		return true
 	elseif dir=="r" then
 		for c in all(coords) do
 			local x=c[1]
 			if x==10 then
 				return false
 			end
+			if c[2]<1 then
+				goto continue
+			end
 			local blw=brd[c[2]][c[1]+1]
 			if blw~=0 then
 				return false
 			end
+			::continue::
 		end
-		return true
 	end
+	return true
 end
 
 function rot_piece()
