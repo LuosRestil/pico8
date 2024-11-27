@@ -11,6 +11,8 @@ local fast_fr=0.05
 local fr=0.6 --fall rate
 local ft=0 --fall timer
 local lt=0 --last time
+trigger_game_over=false
+game_over=false
 
 function _init()
 	cls()
@@ -19,12 +21,12 @@ function _init()
 end
 
 function _update()
+	if game_over then return end
 	local now=time()
 	local dt=now-lt
 	lt=now
 	ft+=dt
 	
-	local new_fr=nil
 	if btn(⬇️) then
 		fr=fast_fr
 	else
@@ -50,6 +52,10 @@ end
 function _draw()
 	--clear bg
  rectfill(xpad,ypad,xpad+pcsz*w,ypad+pcsz*h,0)
+	if game_over then
+		print("game over",47,64,8)
+		return
+	end
 	--debugging
 	if msg ~= nil then
 		print(msg,xpad,ypad,9)
@@ -74,6 +80,9 @@ function _draw()
 		if y>=0 then
 			sspr(spr_pos,0,6,6,x,y)
 		end
+	end
+	if trigger_game_over then
+		game_over=true
 	end
 end
 -->8
@@ -179,6 +188,9 @@ function drop_piece()
 		anchor()
 		piece=next_piece
 		next_piece=new_piece()
+		if not piece_can_spawn() then
+			trigger_game_over=true
+		end
 	end
 end
 
@@ -207,19 +219,31 @@ end
 
 function piece_can_drop()
 	local coords=brd_coords()
-	for coord in all(coords) do
-		local y=coord[2]
+	for c in all(coords) do
+		local y=c[2]
 		if y==20 then
 			return false
 		end
-		if coord[2]<1 then
+		if c[2]<1 then
 			goto continue
 		end
-		local blw=brd[coord[2]+1][coord[1]]
-		if blw~=0 and blw~=999 then
+		local blw=brd[c[2]+1][c[1]]
+		if blw~=0 then
 			return false
 		end
 		::continue::
+	end
+	return true
+end
+
+function piece_can_spawn()
+	local coords=brd_coords()
+	for c in all(coords) do
+		local y=c[2]
+		local brdno=brd[c[2]][c[1]]
+		if brdno~=0 then
+			return false
+		end
 	end
 	return true
 end
