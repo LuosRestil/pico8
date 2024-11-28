@@ -32,6 +32,7 @@ function _update()
 	local dt=now-lt
 	lt=now
 	
+	--line destroy
 	if line_destroy then
 		ld_timer+=dt
 		if ld_timer>ld_dur then
@@ -116,7 +117,7 @@ function _draw()
 	end
 	
 	--next piece
-	rectfill(96,4,126,36)
+	rectfill(96,4,126,36,0)
 	print("next",104,8,7)
 	col=next_piece.shape.col-1
 	spr_pos=16+col*6
