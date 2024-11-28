@@ -7,8 +7,8 @@ local h=20 --board height
 local xpad=34 --board marg. l
 local ypad=4 --board marg. top
 local fr=0.6 --fall rate
-local slow_fr=0.6
-local fast_fr=0.05
+local slow_fr=0.01
+local fast_fr=1
 local ft=0 --fall timer
 local lt=0 --last time
 trigger_game_over=false
@@ -17,6 +17,9 @@ trigger_line_destroy=false
 line_destroy=false
 local ld_timer=0
 local ld_dur=0.5
+lvl=1
+score=0
+lines=0
 
 function _init()
 	cls()
@@ -39,6 +42,8 @@ function _update()
 			ld_timer=0
 			ft=0
 			line_destroy=false
+			increment_lines()
+			increment_score()
 			fill_destroyed()
 		else
 			decay_lines()
@@ -54,8 +59,8 @@ function _update()
 		fr=slow_fr
 	end
 	
-	if ft>fr then
-		ft-=fr
+	if ft>1-fr then
+		ft-=1-fr
 		drop_piece()
 	end
 	
@@ -89,7 +94,7 @@ function _draw()
 	end
 	
 	--debugging
-	if msg ~= nil then
+	if msg~=nil then
 		print(msg,xpad,ypad,9)
 	end
 	
@@ -130,6 +135,21 @@ function _draw()
 		local y=(b[2]-1)*pcsz+25+shp.np_pad[2]
 		sspr(spr_pos,0,6,6,x,y)
 	end
+	
+	--stat container
+	rectfill(2,2,30,45,0)
+	
+	--level
+	print("level",5,4,7)
+	print(lvl,5,10,7)
+	
+	--lines
+	print("lines",5,18,7)
+	print(lines,5,24,7)
+	
+		--score
+	print("score",5,32,7)
+	print(score,5,38,7)
 	
 	if trigger_line_destroy then
 		line_destroy=true
@@ -181,6 +201,24 @@ function decay_lines()
 			pset(x,y,0)
 		end
 	end
+end
+
+local lines_base_score={40,100,300,1200}
+
+function increment_lines()
+	lines+=#to_destroy
+	local new_lvl=flr(lines/10)+1
+	if new_lvl~=lvl then
+		slow_fr+=.08
+		--todo level up indicator
+	end
+	lvl=new_lvl
+end
+
+function increment_score()
+	local l=#to_destroy
+	local base=lines_base_score[l]
+	score+=base*lvl
 end
 
 function fill_destroyed()
