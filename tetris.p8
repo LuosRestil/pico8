@@ -407,8 +407,30 @@ function rot_piece()
 	if piece.variant>#piece.shape.vars then
 		piece.variant=1
 	end
-	--todo figure out rot rules
-	--when new pos is occupied
+	if not valid() then
+		piece.variant=orig_var
+	end
+end
+
+function valid()	
+	local coords=brd_coords()
+	for c in all(coords) do
+		if c[1]<1 or c[1]>#brd[1] then
+			return false
+		end
+		if c[2]>#brd then
+			return false
+		end
+		if c[2]<1 then
+			goto continue
+		end
+		local bc=brd[c[2]][c[1]]
+		if bc~=0 then
+			return false
+		end
+		::continue::
+	end
+	return true
 end
 
 
