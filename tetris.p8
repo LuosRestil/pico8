@@ -72,7 +72,10 @@ function _update()
 		move_piece("l")
 	end
 	if btnp(🅾️) then
-		rot_piece()
+		rot_piece("l")
+	end
+	if btnp(❎) then
+		rot_piece("r")
 	end
 	
 	check_lines()
@@ -151,8 +154,6 @@ function _draw()
 		--score
 	print("score",5,32,7)
 	print(score,5,38,7)
-	
-	print("speed:"..1-fr,34,4,7)
 	
 	if trigger_line_destroy then
 		line_destroy=true
@@ -446,12 +447,20 @@ function can_move(dir)
 	return true
 end
 
-function rot_piece()
+function rot_piece(dir)
 	local orig_var=piece.variant
-	piece.variant+=1
-	if piece.variant>#piece.shape.vars then
-		piece.variant=1
+	if dir=="l" then
+		piece.variant+=1
+		if piece.variant>#piece.shape.vars then
+			piece.variant=1
+		end
+	else
+		piece.variant-=1
+		if piece.variant<1 then
+			piece.variant=#piece.shape.vars
+		end
 	end
+
 	if not valid() then
 		piece.variant=orig_var
 	end
