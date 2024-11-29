@@ -350,6 +350,7 @@ function drop_piece()
 	end
 end
 
+-- add board vals for piece
 function set_brd(val)
 	local coords=brd_coords()
 	for coord in all(coords) do
@@ -359,6 +360,107 @@ end
 
 function anchor()
 	set_brd(piece.shape.col)
+	--make_gold()
+end
+
+function make_gold()
+	local seen={}
+	for i=1,#brd do
+		for j=1,#brd[1] do
+			local val=brd[i][j]
+			if val==0 and not seen[i..":"..j] do
+				--flood fill
+				local gold=true
+				local area={}
+				local q={}
+				local tag=i..":"..j
+				add(q,tag)
+				seen[tag]=true
+				while #q>0 do
+					--process cell
+					local cell=q[1]
+					del(q,cell)
+					add(area,cell)
+					local rc=split(cell,":")
+					local row=rc[1]
+					local col=rc[2]
+					if row==1 then gold=false end
+					--add neighbors to queue
+					--todo dry up
+					local nrow
+					local ncol
+					--up
+					nrow=row-1
+					ncol=col
+					tag=nrow..":"..ncol
+					if (
+						not seen[tag] and
+						nrow>=1 and 
+						nrow<=#brd and
+						ncol>=1 and
+						ncol<=#brd[1] and
+						brd[nrow][ncol]==0
+					) then
+						seen[tag]=true
+						add(q,tag)
+					end 
+					--down
+					nrow=row+1
+					ncol=col
+					tag=nrow..":"..ncol
+					if (
+						not seen[tag] and
+						nrow>=1 and 
+						nrow<=#brd and
+						ncol>=1 and
+						ncol<=#brd[1] and
+						brd[nrow][ncol]==0
+					) then
+						seen[tag]=true
+						add(q,tag)
+					end 
+					--left
+					nrow=row
+					ncol=col-1
+					tag=nrow..":"..ncol
+					if (
+						not seen[tag] and
+						nrow>=1 and 
+						nrow<=#brd and
+						ncol>=1 and
+						ncol<=#brd[1] and
+						brd[nrow][ncol]==0
+					) then
+						seen[tag]=true
+						add(q,tag)
+					end 
+					--right
+					nrow=row
+					ncol=col+1
+					tag=nrow..":"..ncol
+					if (
+						not seen[tag] and
+						nrow>=1 and 
+						nrow<=#brd and
+						ncol>=1 and
+						ncol<=#brd[1] and
+						brd[nrow][ncol]==0
+					) then
+						seen[tag]=true
+						add(q,tag)
+					end 
+				end
+				if gold then
+					for cell in all(area) do
+						local rc=split(cell,":")
+						local row=rc[1]
+						local col=rc[2]
+						brd[row][col]=4
+					end
+				end
+			end
+		end
+	end
 end
 
 function brd_coords()
@@ -491,12 +593,12 @@ end
 
 
 __gfx__
-00000000111511111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000111511111777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0070070055555555177c711ee7e11cc7c10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000111111511777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000111111511777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700111111511111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000111511111111111111111111119999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000111511111777711eeee11cccc19aaaa90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0070070055555555177c711ee7e11cc7c19aa7a90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000111111511777711eeee11cccc19aaaa90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000111111511777711eeee11cccc19aaaa90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700111111511111111111111111119999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000555555550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000111511110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
