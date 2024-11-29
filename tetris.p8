@@ -6,9 +6,10 @@ local w=10 --board width
 local h=20 --board height
 local xpad=34 --board marg. l
 local ypad=4 --board marg. top
-local fr=0.6 --fall rate
-local slow_fr=0.01
+slow_fr=0.01
+max_slow_fr=0.93
 local fast_fr=1
+local fr=slow_fr
 local ft=0 --fall timer
 local lt=0 --last time
 trigger_game_over=false
@@ -151,6 +152,8 @@ function _draw()
 	print("score",5,32,7)
 	print(score,5,38,7)
 	
+	print("speed:"..1-fr,34,4,7)
+	
 	if trigger_line_destroy then
 		line_destroy=true
 		trigger_line_destroy=false
@@ -210,6 +213,9 @@ function increment_lines()
 	local new_lvl=flr(lines/10)+1
 	if new_lvl~=lvl then
 		slow_fr+=.08
+		if slow_fr>max_slow_fr then
+			slow_fr=max_slow_fr
+		end
 		--todo level up indicator
 	end
 	lvl=new_lvl
