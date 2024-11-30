@@ -21,10 +21,11 @@ local ld_dur=0.5
 lvl=1
 score=0
 lines=0
+decay_px={}
+psyses={}
+local exploding=false
 
 function _init()
-	cls()
-	map(0)
 	init_board()
 	init_pieces()
 end
@@ -36,6 +37,10 @@ function _update()
 	local dt=now-lt
 	lt=now
 	
+	for psys in all(psyses) do
+		update_psys(psys)
+	end
+	
 	--line destroy
 	if line_destroy then
 		ld_timer+=dt
@@ -46,10 +51,30 @@ function _update()
 			increment_lines()
 			increment_score()
 			fill_destroyed()
+			decay_px={}
+			for psys in all(psyses) do
+				psys.active=false
+			end
+			exploding=false
 		else
 			decay_lines()
+			if #to_destroy==4 and not exploding then
+				explode_lines()
+				exploding=true
+			end
 		end
 		return
+	end
+	local destroy_psyses=true
+	for psys in all(psyses) do
+		if #psys.ps>0 then
+			destroy_psyses=false
+			goto end_destroy_check
+		end
+	end
+	::end_destroy_check::
+	if destroy_psyses then
+		psyses={}
 	end
 	
 	ft+=dt
@@ -75,7 +100,10 @@ function _update()
 		rot_piece("l")
 	end
 	if btnp(❎) then
-		rot_piece("r")
+		--rot_piece("r")
+		--for play testing...
+		--stick on demand
+		next_piece.shape=pieces[4]
 	end
 	
 	check_lines()
@@ -86,9 +114,10 @@ function _update()
 end
 
 function _draw()
-	if line_destroy then return end
+	cls()
+	map(0)
 
-	--clear bg
+	--board bg
  rectfill(xpad,ypad,xpad+pcsz*w,ypad+pcsz*h,0)
 	
 	--game over
@@ -123,6 +152,16 @@ function _draw()
 		if y>=0 then
 			sspr(spr_pos,0,6,6,x,y)
 		end
+	end
+	
+	--decay px
+	for px in all(decay_px) do
+		pset(px.x,px.y,0)
+	end
+	
+	--particles
+	for psys in all(psyses) do
+		draw_psys(psys)
 	end
 	
 	--next piece
@@ -202,11 +241,22 @@ function decay_lines()
 		for i=1,30 do
 			local x=rnd(10*pcsz)+xpad
 			local y=rnd(6)+ypad+(row-1)*pcsz
-			pset(x,y,0)
+			add(decay_px,{x=x,y=y})
 		end
 	end
 end
 
+function explode_lines()
+	for row in all(to_destroy) do
+		for i=1,10 do
+			local x=xpad+(i-1)*pcsz+3
+			local y=ypad+(row-1)*pcsz+3
+			add(psyses,new_psys(x,y))
+		end
+	end
+end
+
+--todo score overflows
 local lines_base_score={40,100,300,1200}
 
 function increment_lines()
@@ -490,6 +540,60 @@ end
 
 
 
+-->8
+--particles
+function new_psys(x,y)
+	return {
+		ps={},
+		x=x,
+		y=y,
+		active=true
+	}
+end
+
+function update_psys(psys)
+	local to_del={}
+	for p in all(psys.ps) do
+		update_p(p)
+		if p.life<0 then
+			add(to_del,p)
+		end
+	end
+	for td in all(to_del) do
+		del(psys.ps,td)
+	end
+	if psys.active then
+		for i=1,3 do
+			add(psys.ps, new_p(psys.x,psys.y))
+		end
+	end
+end
+
+function draw_psys(psys)
+	for p in all(psys.ps) do
+		draw_p(p)
+	end
+end
+
+function new_p(x,y)
+	local p={
+		life=flr(rnd(10,30)),
+		col=rnd({8,9,10}),
+		pos={x,y},
+		vel={rnd(4)-2,rnd(4)-2}
+	}
+	return p
+end
+
+function update_p(p)
+	p.life-=1
+	p.pos[1]+=p.vel[1]
+	p.pos[2]+=p.vel[2]
+end
+
+function draw_p(p)
+	pset(p.pos[1],p.pos[2],p.col)
+end
 __gfx__
 00000000111511111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000111511111777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
