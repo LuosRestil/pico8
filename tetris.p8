@@ -19,7 +19,7 @@ line_destroy=false
 local ld_timer=0
 local ld_dur=0.5
 lvl=1
-score=0
+score="0"
 lines=0
 decay_px={}
 psyses={}
@@ -275,7 +275,29 @@ end
 function increment_score()
 	local l=#to_destroy
 	local base=lines_base_score[l]
-	score+=base*lvl
+	local to_add=tostr(base*lvl)
+	assert(base*lvl>0)
+	
+	local carry=0
+	local res=""
+	local slen=#score
+	local talen=#to_add
+	local maxlen=max(slen,talen)
+	for i=0,maxlen-1 do
+		local dig1=sub(score,slen-i,slen-i)
+		dig1=(dig1=="" and "0" or dig1)
+		dig1=tonum(dig1)
+		local dig2=sub(to_add,talen-i,talen-i)
+		dig2=(dig2=="" and "0" or dig2)
+		dig2=tonum(dig2)
+		local sum=dig1+dig2+carry
+		carry=flr(sum/10)
+		res=tostr(sum%10)..res
+	end
+	if carry > 0 then
+		res=tostr(carry)..res
+	end
+	score=res
 end
 
 function fill_destroyed()
