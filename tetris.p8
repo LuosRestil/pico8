@@ -100,10 +100,10 @@ function _update()
 		rot_piece("l")
 	end
 	if btnp(❎) then
-		--rot_piece("r")
+		rot_piece("r")
 		--for play testing...
 		--stick on demand
-		next_piece.shape=pieces[4]
+		--next_piece.shape=pieces[4]
 	end
 	
 	check_lines()
