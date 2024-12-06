@@ -256,9 +256,6 @@ function explode_lines()
 	end
 end
 
---todo score overflows
-local lines_base_score={40,100,300,1200}
-
 function increment_lines()
 	lines+=#to_destroy
 	local new_lvl=flr(lines/10)+1
@@ -267,10 +264,12 @@ function increment_lines()
 		if slow_fr>max_slow_fr then
 			slow_fr=max_slow_fr
 		end
-		--todo level up indicator
+		level_up()
 	end
 	lvl=new_lvl
 end
+
+local lines_base_score={40,100,300,1200}
 
 function increment_score()
 	local l=#to_destroy
@@ -316,6 +315,29 @@ function fill_destroyed()
 	end
 	to_destroy={}
 	brd=nb
+end
+--2,3,4,6,8,9,10,11,12,14,15
+local pals = {
+	{2,3},--purp,dkgrn
+	{11,9},--ltgrn,orng
+	{4,8},--brn,red
+	{5,10},--dkgry,yellow
+	{3,12},--dkgrn,ltblue
+	{8,2},--red,purp
+	{14,4},--pnk,brn
+	{11,6},--ltgrn,ltgry
+	{12,14}--ltblue,pink
+}
+local next_pal_idx=1
+
+function level_up()
+	local next_pal=pals[next_pal_idx]
+	pal(12,next_pal[1])
+	pal(14,next_pal[2])
+	next_pal_idx+=1
+	if next_pal_idx>#pals then
+		next_pal_idx=1
+	end
 end
 -->8
 --pieces
@@ -616,6 +638,13 @@ end
 function draw_p(p)
 	pset(p.pos[1],p.pos[2],p.col)
 end
+-->8
+--todo
+--better particles
+--flash bg on tetris
+--tweak colors
+--sound
+--score needs 4 dig more space
 __gfx__
 00000000111511111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000111511111777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
