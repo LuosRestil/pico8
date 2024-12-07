@@ -350,10 +350,10 @@ local pals = {
 	{2,3},--purp,dkgrn
 	{11,9},--ltgrn,orng
 	{4,8},--brn,red
-	{5,10},--dkgry,yellow
+	{5,14},--dkgry,pink
 	{3,12},--dkgrn,ltblue
 	{8,2},--red,purp
-	{14,4},--pnk,brn
+	{9,4},--orng,brn
 	{11,6},--ltgrn,ltgry
 	{12,14}--ltblue,pink
 }
@@ -669,8 +669,7 @@ function draw_p(p)
 end
 -->8
 --todo
---better particles
---flash bg on tetris
+--better particles?
 --tweak colors
 --sound
 --score needs 4 dig more space
