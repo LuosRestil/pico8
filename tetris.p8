@@ -24,6 +24,11 @@ lines=0
 decay_px={}
 psyses={}
 local exploding=false
+local flash_timer=0
+local flash=false
+local flash_chg_timer=0
+local flash_rate=3
+local flash_duration=15
 
 function _init()
 	init_board()
@@ -32,6 +37,19 @@ end
 
 function _update()
 	if game_over then return end
+	
+	if flash_timer>0 then
+		flash_timer-=1
+		if flash_chg_timer>0 then
+			flash_chg_timer-=1
+			if flash_chg_timer==0 then
+				flash_chg_timer=flash_rate
+				flash=not flash
+			end
+		end
+	else
+		flash=false
+	end
 	
 	local now=time()
 	local dt=now-lt
@@ -61,6 +79,7 @@ function _update()
 			if #to_destroy==4 and not exploding then
 				explode_lines()
 				exploding=true
+				init_flash()
 			end
 		end
 		return
@@ -115,7 +134,11 @@ end
 
 function _draw()
 	cls()
-	map(0)
+	if flash then
+		rectfill(0,0,128,128,7)
+	else
+		map(0)
+	end
 
 	--board bg
  rectfill(xpad,ypad,xpad+pcsz*w,ypad+pcsz*h,0)
@@ -202,6 +225,12 @@ function _draw()
 	if trigger_game_over then
 		game_over=true
 	end
+end
+
+function init_flash()
+	flash=true
+	flash_timer=flash_duration
+	flash_chg_timer=flash_rate
 end
 -->8
 --board
@@ -645,6 +674,7 @@ end
 --tweak colors
 --sound
 --score needs 4 dig more space
+--better game over
 __gfx__
 00000000111511111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000111511111777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
