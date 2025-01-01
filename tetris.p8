@@ -298,7 +298,7 @@ function increment_lines()
 	lvl=new_lvl
 end
 
-local lines_base_score={40,100,300,1200}
+local lines_base_score={2,5,15,60}
 
 function increment_score()
 	local l=#to_destroy
@@ -669,8 +669,6 @@ function draw_p(p)
 end
 -->8
 --todo
---better particles?
---tweak colors
 --sound
 --score needs 4 dig more space
 --better game over
