@@ -18,7 +18,7 @@ trigger_line_destroy=false
 line_destroy=false
 local ld_timer=0
 local ld_dur=0.5
-lvl=1
+lvl=0
 score="0"
 lines=0
 decay_px={}
@@ -149,11 +149,6 @@ function _draw()
 		return
 	end
 	
-	--debugging
-	if msg~=nil then
-		print(msg,xpad,ypad,9)
-	end
-	
 	--board
 	for i=1,h do
 		for j=1,w do
@@ -216,6 +211,11 @@ function _draw()
 		--score
 	print("score",5,32,7)
 	print(score,5,38,7)
+	
+	--debugging
+	if msg~=nil then
+		print(msg,xpad,ypad,9)
+	end
 	
 	if trigger_line_destroy then
 		line_destroy=true
@@ -287,7 +287,7 @@ end
 
 function increment_lines()
 	lines+=#to_destroy
-	local new_lvl=flr(lines/10)+1
+	local new_lvl=flr(lines/10)
 	if new_lvl~=lvl then
 		slow_fr+=.08
 		if slow_fr>max_slow_fr then
@@ -298,13 +298,12 @@ function increment_lines()
 	lvl=new_lvl
 end
 
-local lines_base_score={2,5,15,60}
+local lines_base_score={40,100,300,1200}
 
 function increment_score()
 	local l=#to_destroy
 	local base=lines_base_score[l]
-	local to_add=tostr(base*lvl)
-	assert(base*lvl>0)
+	local to_add=tostr(base*(lvl+1))
 	
 	local carry=0
 	local res=""
@@ -312,10 +311,10 @@ function increment_score()
 	local talen=#to_add
 	local maxlen=max(slen,talen)
 	for i=0,maxlen-1 do
-		local dig1=sub(score,slen-i,slen-i)
+		local dig1=sub(score,max(slen-i,0),max(slen-i,0))
 		dig1=(dig1=="" and "0" or dig1)
 		dig1=tonum(dig1)
-		local dig2=sub(to_add,talen-i,talen-i)
+		local dig2=sub(to_add,max(talen-i,0),max(talen-i,0))
 		dig2=(dig2=="" and "0" or dig2)
 		dig2=tonum(dig2)
 		local sum=dig1+dig2+carry
