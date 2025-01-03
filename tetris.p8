@@ -360,7 +360,7 @@ end
 
 function anchor()
 	set_brd(piece.shape.col)
-	--make_gold()
+	make_gold()
 end
 
 function make_gold()
