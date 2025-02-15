@@ -1,11 +1,11 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
-local pcsz=6 --piece size
+pcsz=6 --piece size
 local w=10 --board width
 local h=20 --board height
-local xpad=34 --board marg. l
-local ypad=4 --board marg. top
+xpad=34 --board marg. l
+ypad=4 --board marg. top
 slow_fr=0.01
 max_slow_fr=0.93
 local fast_fr=1
@@ -29,6 +29,7 @@ local flash=false
 local flash_chg_timer=0
 local flash_rate=3
 local flash_duration=15
+gold_mode=true
 
 function _init()
 	init_board()
@@ -213,6 +214,13 @@ function _draw()
 	print(score,5,38,7)
 	
 	--debugging
+--	--output bottom left corner val
+--	local x=xpad+6
+--	local y=ypad+h*pcsz-7
+--	local grd_bl=px_to_grid(x,y)
+--	local btm_left=get_brd_val(x,y)
+--	msg=x..":"..y.." "..grd_bl[1]..":"..grd_bl[2].." "..btm_left
+--	pset(x,y,8)
 	if msg~=nil then
 		print(msg,xpad,ypad,9)
 	end
@@ -270,9 +278,26 @@ function decay_lines()
 		for i=1,30 do
 			local x=rnd(10*pcsz)+xpad
 			local y=rnd(6)+ypad+(row-1)*pcsz
-			add(decay_px,{x=x,y=y})
+			local brd_val=get_brd_val(x,y)
+			printh(brd_val)
+			if brd_val~=4 then
+				add(decay_px,{x=x,y=y})
+			end
 		end
 	end
+end
+
+function px_to_grid(x,y)
+	local brd_x=x-xpad
+	local brd_y=y-ypad
+	local row=flr(brd_y/pcsz)+1
+	local col=flr(brd_x/pcsz)+1
+	return {row,col}
+end
+
+function get_brd_val(x,y)
+	local pos=px_to_grid(x,y)
+	return brd[pos[1]][pos[2]]
 end
 
 function explode_lines()
@@ -481,6 +506,107 @@ end
 
 function anchor()
 	set_brd(piece.shape.col)
+	if gold_mode then make_gold() end
+end
+
+function make_gold()
+	local seen={}
+	for i=1,#brd do
+		for j=1,#brd[1] do
+			local val=brd[i][j]
+			if val==0 and not seen[i..":"..j] do
+				--flood fill
+				local gold=true
+				local area={}
+				local q={}
+				local tag=i..":"..j
+				add(q,tag)
+				seen[tag]=true
+				while #q>0 do
+					--process cell
+					local cell=q[1]
+					del(q,cell)
+					add(area,cell)
+					local rc=split(cell,":")
+					local row=rc[1]
+					local col=rc[2]
+					if row==1 then gold=false end
+					--add neighbors to queue
+					--todo dry up
+					local nrow
+					local ncol
+					--up
+					nrow=row-1
+					ncol=col
+					tag=nrow..":"..ncol
+					if (
+						not seen[tag] and
+						nrow>=1 and 
+						nrow<=#brd and
+						ncol>=1 and
+						ncol<=#brd[1] and
+						brd[nrow][ncol]==0
+					) then
+						seen[tag]=true
+						add(q,tag)
+					end 
+					--down
+					nrow=row+1
+					ncol=col
+					tag=nrow..":"..ncol
+					if (
+						not seen[tag] and
+						nrow>=1 and 
+						nrow<=#brd and
+						ncol>=1 and
+						ncol<=#brd[1] and
+						brd[nrow][ncol]==0
+					) then
+						seen[tag]=true
+						add(q,tag)
+					end 
+					--left
+					nrow=row
+					ncol=col-1
+					tag=nrow..":"..ncol
+					if (
+						not seen[tag] and
+						nrow>=1 and 
+						nrow<=#brd and
+						ncol>=1 and
+						ncol<=#brd[1] and
+						brd[nrow][ncol]==0
+					) then
+						seen[tag]=true
+						add(q,tag)
+					end 
+					--right
+					nrow=row
+					ncol=col+1
+					tag=nrow..":"..ncol
+					if (
+						not seen[tag] and
+						nrow>=1 and 
+						nrow<=#brd and
+						ncol>=1 and
+						ncol<=#brd[1] and
+						brd[nrow][ncol]==0
+					) then
+						seen[tag]=true
+						add(q,tag)
+					end 
+				end
+				if gold then
+					for cell in all(area) do
+						local rc=split(cell,":")
+						local row=rc[1]
+						local col=rc[2]
+						brd[row][col]=4
+					end
+				end
+			end
+		end
+	end
 end
 
 function brd_coords()
@@ -668,6 +794,10 @@ function draw_p(p)
 end
 -->8
 --todo
+--don't make gold if touching gold
+--don't destroy gold in lines
+--drop gold as far as possible
+--destroy gold lines
 --sound
 --better game over
 --little animation for good score
@@ -676,12 +806,12 @@ end
 --choose level
 
 __gfx__
-00000000111511111111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000111511111777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0070070055555555177c711ee7e11cc7c10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000111111511777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000111111511777711eeee11cccc10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700111111511111111111111111110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000111511111111111111111111119999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000111511111777711eeee11cccc19aaaa90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0070070055555555177c711ee7e11cc7c19aa7a90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000111111511777711eeee11cccc19aaaa90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000111111511777711eeee11cccc19aaaa90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700111111511111111111111111119999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000555555550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000111511110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
