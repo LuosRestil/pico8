@@ -214,13 +214,6 @@ function _draw()
 	print(score,5,38,7)
 	
 	--debugging
---	--output bottom left corner val
---	local x=xpad+6
---	local y=ypad+h*pcsz-7
---	local grd_bl=px_to_grid(x,y)
---	local btm_left=get_brd_val(x,y)
---	msg=x..":"..y.." "..grd_bl[1]..":"..grd_bl[2].." "..btm_left
---	pset(x,y,8)
 	if msg~=nil then
 		print(msg,xpad,ypad,9)
 	end
@@ -514,8 +507,10 @@ function make_gold()
 	for i=1,#brd do
 		for j=1,#brd[1] do
 			local val=brd[i][j]
+			--every time we see
+			--a new empty space,
+			--flood fill
 			if val==0 and not seen[i..":"..j] do
-				--flood fill
 				local gold=true
 				local area={}
 				local q={}
@@ -538,63 +533,75 @@ function make_gold()
 					--up
 					nrow=row-1
 					ncol=col
+					if not on_brd(nrow,ncol) then
+						goto down
+					end
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						nrow>=1 and 
-						nrow<=#brd and
-						ncol>=1 and
-						ncol<=#brd[1] and
 						brd[nrow][ncol]==0
 					) then
 						seen[tag]=true
 						add(q,tag)
-					end 
+					end
+					if brd[nrow][ncol]==4 then
+						gold=false
+					end
 					--down
+					::down::
 					nrow=row+1
 					ncol=col
+					if not on_brd(nrow,ncol) then
+						goto left
+					end
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						nrow>=1 and 
-						nrow<=#brd and
-						ncol>=1 and
-						ncol<=#brd[1] and
 						brd[nrow][ncol]==0
 					) then
 						seen[tag]=true
 						add(q,tag)
-					end 
+					end
+					if brd[nrow][ncol]==4 then
+						gold=false
+					end
 					--left
+					::left::
 					nrow=row
 					ncol=col-1
+					if not on_brd(nrow,ncol) then
+						goto right
+					end
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						nrow>=1 and 
-						nrow<=#brd and
-						ncol>=1 and
-						ncol<=#brd[1] and
 						brd[nrow][ncol]==0
 					) then
 						seen[tag]=true
 						add(q,tag)
-					end 
+					end
+					if brd[nrow][ncol]==4 then
+						gold=false
+					end
 					--right
+					::right::
 					nrow=row
 					ncol=col+1
+					if not on_brd(nrow,ncol) then
+						goto finish
+					end
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						nrow>=1 and 
-						nrow<=#brd and
-						ncol>=1 and
-						ncol<=#brd[1] and
 						brd[nrow][ncol]==0
 					) then
 						seen[tag]=true
 						add(q,tag)
-					end 
+					end
+					if brd[nrow][ncol]==4 then
+						gold=false
+					end
+					::finish::
 				end
 				if gold then
 					for cell in all(area) do
@@ -607,6 +614,15 @@ function make_gold()
 			end
 		end
 	end
+end
+
+function on_brd(row,col)
+	return (
+		row>=1 and 
+		row<=#brd and
+		col>=1 and
+		col<=#brd[1]
+	)
 end
 
 function brd_coords()
@@ -794,7 +810,6 @@ function draw_p(p)
 end
 -->8
 --todo
---don't make gold if touching gold
 --don't destroy gold in lines
 --drop gold as far as possible
 --destroy gold lines
