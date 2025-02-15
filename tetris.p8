@@ -29,7 +29,7 @@ local flash=false
 local flash_chg_timer=0
 local flash_rate=3
 local flash_duration=15
-gold_mode=true
+gold_mode=false
 
 function _init()
 	init_board()
