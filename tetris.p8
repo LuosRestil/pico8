@@ -29,6 +29,7 @@ local flash=false
 local flash_chg_timer=0
 local flash_rate=3
 local flash_duration=15
+pc_id=0
 gold_mode=false
 
 function _init()
@@ -153,8 +154,8 @@ function _draw()
 	--board
 	for i=1,h do
 		for j=1,w do
-			if brd[i][j]~=0 then
-				local col=brd[i][j]-1
+			if brd[i][j].col~=0 then
+				local col=brd[i][j].col-1
 				local x=(j-1)*pcsz+xpad
 				local y=(i-1)*pcsz+ypad
 				sspr(16+(col*6),0,6,6,x,y) 
@@ -245,7 +246,7 @@ function new_board()
 	for i=1,20 do
 		local row={}
 		for j=1,10 do
-			add(row,0)
+			add(row,{col=0,id=nil})
 		end
 		add(nb,row)
 	end
@@ -254,8 +255,8 @@ end
 
 function check_lines()
 	for row=1,#brd do
-		for col in all(brd[row]) do
-			if col==0 then
+		for cell in all(brd[row]) do
+			if cell.col==0 then
 				goto continue
 			end
 		end
@@ -272,8 +273,7 @@ function decay_lines()
 			local x=rnd(10*pcsz)+xpad
 			local y=rnd(6)+ypad+(row-1)*pcsz
 			local brd_val=get_brd_val(x,y)
-			printh(brd_val)
-			if brd_val~=4 then
+			if brd_val.col~=4 then
 				add(decay_px,{x=x,y=y})
 			end
 		end
@@ -362,6 +362,7 @@ function fill_destroyed()
 	to_destroy={}
 	brd=nb
 end
+
 --2,3,4,6,8,9,10,11,12,14,15
 local pals = {
 	{2,3},--purp,dkgrn
@@ -467,13 +468,15 @@ end
 
 function new_piece()
 	local pc=rnd(pieces)
+	pc_id+=1
 	return {
 		shape=pc,
 		loc={
 			pc.shiftl and 4 or 5,
 			1
 		},
-		variant=1
+		variant=1,
+		id=pc_id
 	}
 end
 
@@ -490,15 +493,16 @@ function drop_piece()
 	end
 end
 
-function set_brd(val)
+function set_brd(col,id)
+	local pc_data={col=col,id=id}
 	local coords=brd_coords()
 	for coord in all(coords) do
-		brd[coord[2]][coord[1]] = val
+		brd[coord[2]][coord[1]]=pc_data 
 	end
 end
 
 function anchor()
-	set_brd(piece.shape.col)
+	set_brd(piece.shape.col,piece.id)
 	if gold_mode then make_gold() end
 end
 
@@ -539,12 +543,12 @@ function make_gold()
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						brd[nrow][ncol]==0
+						brd[nrow][ncol].col==0
 					) then
 						seen[tag]=true
 						add(q,tag)
 					end
-					if brd[nrow][ncol]==4 then
+					if brd[nrow][ncol].col==4 then
 						gold=false
 					end
 					--down
@@ -557,12 +561,12 @@ function make_gold()
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						brd[nrow][ncol]==0
+						brd[nrow][ncol].col==0
 					) then
 						seen[tag]=true
 						add(q,tag)
 					end
-					if brd[nrow][ncol]==4 then
+					if brd[nrow][ncol].col==4 then
 						gold=false
 					end
 					--left
@@ -575,12 +579,12 @@ function make_gold()
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						brd[nrow][ncol]==0
+						brd[nrow][ncol].col==0
 					) then
 						seen[tag]=true
 						add(q,tag)
 					end
-					if brd[nrow][ncol]==4 then
+					if brd[nrow][ncol].col==4 then
 						gold=false
 					end
 					--right
@@ -593,12 +597,12 @@ function make_gold()
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						brd[nrow][ncol]==0
+						brd[nrow][ncol].col==0
 					) then
 						seen[tag]=true
 						add(q,tag)
 					end
-					if brd[nrow][ncol]==4 then
+					if brd[nrow][ncol].col==4 then
 						gold=false
 					end
 					::finish::
@@ -608,7 +612,7 @@ function make_gold()
 						local rc=split(cell,":")
 						local row=rc[1]
 						local col=rc[2]
-						brd[row][col]=4
+						brd[row][col]={col=4,id=nil}
 					end
 				end
 			end
@@ -625,6 +629,7 @@ function on_brd(row,col)
 	)
 end
 
+--gets board coords of curr piece
 function brd_coords()
 	local coords={}
 	local shp=piece.shape
@@ -640,15 +645,16 @@ end
 function piece_can_drop()
 	local coords=brd_coords()
 	for c in all(coords) do
-		local y=c[2]
-		if y==20 then
+		local cx=c[1]
+		local cy=c[2]
+		if cy==20 then
 			return false
 		end
-		if c[2]<1 then
+		if cy<1 then
 			goto continue
 		end
-		local blw=brd[c[2]+1][c[1]]
-		if blw~=0 then
+		local blw=brd[cy+1][cx]
+		if blw.col~=0 then
 			return false
 		end
 		::continue::
@@ -661,7 +667,7 @@ function piece_can_spawn()
 	for c in all(coords) do
 		local y=c[2]
 		local brdno=brd[c[2]][c[1]]
-		if brdno~=0 then
+		if brdno.col~=0 then
 			return false
 		end
 	end
@@ -687,7 +693,7 @@ function can_move(dir)
 				goto continue 
 			end
 			local blw=brd[c[2]][c[1]-1]
-			if blw~=0 then
+			if blw.col~=0 then
 				return false
 			end
 			::continue::
@@ -702,7 +708,7 @@ function can_move(dir)
 				goto continue
 			end
 			local blw=brd[c[2]][c[1]+1]
-			if blw~=0 then
+			if blw.col~=0 then
 				return false
 			end
 			::continue::
@@ -743,7 +749,7 @@ function valid()
 			goto continue
 		end
 		local bc=brd[c[2]][c[1]]
-		if bc~=0 then
+		if bc.col~=0 then
 			return false
 		end
 		::continue::
