@@ -510,7 +510,7 @@ function make_gold()
 	local seen={}
 	for i=1,#brd do
 		for j=1,#brd[1] do
-			local val=brd[i][j]
+			local val=brd[i][j].col
 			--every time we see
 			--a new empty space,
 			--flood fill
@@ -816,15 +816,31 @@ function draw_p(p)
 end
 -->8
 --todo
---don't destroy gold in lines
---drop gold as far as possible
---destroy gold lines
---sound
---better game over
---little animation for good score
---title screen
---save scores with name input
---choose level
+--[[
+
+don't destroy gold in lines
+
+create gold *after* 
+	resolving destroyed lines
+	
+drop gold as far as possible
+
+destroy gold lines
+
+better game over
+
+title screen
+
+sound
+
+choose level
+
+save score with name input
+
+animation for good score
+
+]]
+
 
 __gfx__
 00000000111511111111111111111111119999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
