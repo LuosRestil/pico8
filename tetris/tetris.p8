@@ -71,6 +71,7 @@ function _update()
 			line_destroy=false
 			increment_lines()
 			increment_score()
+--			fill_destroyed()
 			fill_destroyed()
 			decay_px={}
 			for psys in all(psyses) do
@@ -79,7 +80,10 @@ function _update()
 			exploding=false
 		else
 			decay_lines()
-			if #to_destroy==4 and not exploding then
+			if 
+				#to_destroy==4 and 
+				not exploding 
+			then
 				explode_lines()
 				exploding=true
 				init_flash()
@@ -349,21 +353,222 @@ function increment_score()
 end
 
 function fill_destroyed()
-	local nb=new_board()
-	for i=1,20 do
-		local shift=0
-		for row in all(to_destroy) do
-			if row==i then
-				goto continue
+--	printh("fill destroyed")
+--	print_arr(to_destroy,"to destroy")
+	local drop_dist=0
+	local to_drp={}
+	
+	--destroy or flag
+	for row=#brd,1,-1 do
+--		printh(
+--			"processing row: "..row
+--		)
+		--destroy
+		if 
+			get_idx(to_destroy,row)~=nil 
+		then
+--			printh("destroy row")
+			drop_dist+=1
+			for col=1,#brd[row] do
+				local cell=brd[row][col]
+				if not is_gold(cell) then
+--					printh("set cell to empty:"..row..","..col)
+					if to_drp[cell.id]~=nil then
+						--potential split pc
+						re_id_above(cell.id,row)
+					end
+					brd[row][col]={col=0,id=nil}
+				end
 			end
-			if (row>i) shift+=1
+		else
+			--flag pcs to drop
+--			printh("flag cells to drop")
+			for col=1,#brd[row] do
+				local id=brd[row][col].id
+				if
+					id~=nil and
+					to_drp[id]==nil
+				then
+					to_drp[id]=drop_dist
+--					printh("flagged: "..id)
+				end
+			end
 		end
-
-		nb[i+shift]=brd[i]
-		::continue::
 	end
+
 	to_destroy={}
-	brd=nb
+	
+	--pass for dropping
+	for row=#brd,1,-1 do
+--		printh("processing row "..row)
+		--drop gold
+		for col=1,#brd[row] do
+			local cell=brd[row][col]
+			if is_gold(cell) then
+				drop_gold(row,col)
+			end
+		end
+		
+		--drop pieces
+		local loop=true
+		while loop do
+--			printh("drop loop")
+			loop=false
+
+			for col=1,#brd[row] do
+--				printh("col: "..col)
+				local cell=brd[row][col]
+				local id=cell.id or "nil"
+--				printh("pc "..id)
+				if has_key(to_drp,id) then
+--					printh(
+--						"pc flagged, id:"..id
+--					)
+					local pot=pot_drop_dist(id)
+					local desired=to_drp[id]
+					local actual=min(pot,desired)
+--					printh("pot: "..pot..", desired: "..desired..", actual: "..actual)
+					if actual>0 then
+--						printh("dropping")
+						drop(cell,actual)
+						del(to_drp,id)
+--						print_arr(pcs_2_drop, "pcs_2_drop after del")
+						loop=true
+					end
+				end
+			end
+		end
+	end
+	
+--	print_brd_ids()
+end
+
+--handle pcs split by destroy
+--by re-iding pcs above line
+--so they aren't marked as seen
+function re_id_above(id,row)
+	local found={}
+	local added=false
+	for r=row-1,1,-1 do
+		for c=1,#brd[1] do
+			local cell=brd[r][c]
+			if cell.id==id do
+				add(found,{r=r,c=c})
+				added=true
+			end
+		end
+		if not added then break end
+	end
+	local changed=false
+	for coord in all(found) do
+		local r,c=coord.r,coord.c
+--		printh("changing cell "..r..":"..c)
+		local cell=brd[r][c]
+--		printh("old id: "..cell.id)
+--		cell.id=pc_id*-1
+
+		--find real cause for
+		--multiple ids changing,
+		--but for a temp fix...
+		brd[r][c]={col=cell.col,id=pc_id*-1}
+		
+--		printh("new id: "..cell.id)
+		changed=true
+	end
+	if changed then pc_id+=1 end
+end
+
+
+
+--get potential drop distance
+--for a given piece
+function pot_drop_dist(id)
+	local min_dist=999
+	local pc_coords=get_pc_coords(id)
+	for coord in all(pc_coords) do
+		local dist_blw=get_dist_blw(coord,id)
+--		printh("dist_blw:"..dist_blw)
+		if dist_blw<min_dist then
+			min_dist=dist_blw
+		end		
+	end
+	return min_dist
+end
+
+function get_dist_blw(coord,id)
+	local row=coord.row
+	local col=coord.col
+	local dist=0
+	local looking=true
+	while looking do
+		if 
+			on_brd(row+1,col) 
+			and
+			(
+				is_empty(brd[row+1][col])
+				or
+				brd[row+1][col].id==id
+			)
+		then
+			dist+=1
+			row+=1
+		else
+			looking=false
+		end
+	end
+	return dist
+end
+
+function get_pc_coords(id)
+	local coords={}
+	--we drop pc cells bottom up
+	--so we want to find
+	--lowest first
+	for row=#brd,1,-1 do
+		for col=1,#brd[1] do
+			local cell=brd[row][col]
+			if cell.id==id then
+				add(coords,{row=row,col=col})
+			end
+		end
+	end
+	return coords
+end
+
+function drop(cell,dist)
+	local pc_coords=get_pc_coords(cell.id)
+	for coord in all(pc_coords) do
+		local row=coord.row
+		local col=coord.col
+		brd[row][col]={col=0,id=nil}
+		brd[row+dist][col]=cell
+	end
+end
+
+function drop_gold(row,col)
+	local row=row
+	local col=col
+	local dropping=true
+	while dropping do
+		if 
+			on_brd(row+1,col) and
+			is_empty(brd[row+1][col])
+		then
+			brd[row+1][col]=brd[row][col]
+			brd[row][col]={col=0,id=nil}
+			col+=1
+		else
+			dropping=false
+		end
+	end
+end
+
+function is_empty(cell)
+	return cell.col==0
+end
+
+function is_gold(cell)
+	return cell.col==4
 end
 
 --2,3,4,6,8,9,10,11,12,14,15
@@ -497,17 +702,23 @@ function drop_piece()
 	end
 end
 
+--todo err here on death
 function set_brd(col,id)
-	local pc_data={col=col,id=id}
 	local coords=brd_coords()
-	for coord in all(coords) do
-		brd[coord[2]][coord[1]]=pc_data 
+	for c in all(coords) do
+		brd[c[2]][c[1]]={
+			col=col,id=id
+		}
 	end
 end
 
 function anchor()
-	set_brd(piece.shape.col,piece.id)
-	if gold_mode then make_gold() end
+	set_brd(
+		piece.shape.col,
+		piece.id
+	)
+	if (gold_mode) make_gold() 
+--	print_brd_ids()
 end
 
 function make_gold()
@@ -518,7 +729,10 @@ function make_gold()
 			--every time we see
 			--a new empty space,
 			--flood fill
-			if val==0 and not seen[i..":"..j] do
+			if 
+				val==0 and not 
+				seen[i..":"..j] 
+			do
 				local gold=true
 				local area={}
 				local q={}
@@ -526,97 +740,113 @@ function make_gold()
 				add(q,tag)
 				seen[tag]=true
 				while #q>0 do
-					--process cell
-					local cell=q[1]
-					del(q,cell)
-					add(area,cell)
-					local rc=split(cell,":")
+					--process queue entry
+					local key=q[1]
+					del(q,key)
+					add(area,key)
+					local rc=split(key,":")
 					local row=rc[1]
 					local col=rc[2]
-					if row==1 then gold=false end
+					if (row==1) gold=false
 					--add neighbors to queue
 					--todo dry up
 					local nrow
 					local ncol
+					local cell
 					--up
 					nrow=row-1
 					ncol=col
-					if not on_brd(nrow,ncol) then
+					cell=brd[nrow][ncol]
+					if 
+						not on_brd(nrow,ncol) 
+					then
 						goto down
 					end
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						brd[nrow][ncol].col==0
+						is_empty(cell)
 					) then
 						seen[tag]=true
 						add(q,tag)
 					end
-					if brd[nrow][ncol].col==4 then
+					if is_gold(cell) then
 						gold=false
 					end
 					--down
 					::down::
 					nrow=row+1
 					ncol=col
-					if not on_brd(nrow,ncol) then
+					cell=brd[row][col]
+					if 
+						not on_brd(nrow,ncol) 
+					then
 						goto left
 					end
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						brd[nrow][ncol].col==0
+						is_empty(cell)
 					) then
 						seen[tag]=true
 						add(q,tag)
 					end
-					if brd[nrow][ncol].col==4 then
+					if is_gold(cell) then
 						gold=false
 					end
 					--left
 					::left::
 					nrow=row
 					ncol=col-1
-					if not on_brd(nrow,ncol) then
+					cell=brd[row][col]
+					if 
+						not on_brd(nrow,ncol) 
+					then
 						goto right
 					end
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						brd[nrow][ncol].col==0
+						is_empty(cell)
 					) then
 						seen[tag]=true
 						add(q,tag)
 					end
-					if brd[nrow][ncol].col==4 then
+					if is_gold(cell) then
 						gold=false
 					end
 					--right
 					::right::
 					nrow=row
 					ncol=col+1
-					if not on_brd(nrow,ncol) then
+					cell=brd[row][col]
+					if 
+						not on_brd(nrow,ncol) 
+					then
 						goto finish
 					end
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
-						brd[nrow][ncol].col==0
+						is_empty(cell)
 					) then
 						seen[tag]=true
 						add(q,tag)
 					end
-					if brd[nrow][ncol].col==4 then
+					if is_gold(cell) then
 						gold=false
 					end
 					::finish::
 				end
+				
 				if gold then
-					for cell in all(area) do
-						local rc=split(cell,":")
+					for key in all(area) do
+						local rc=split(key,":")
 						local row=rc[1]
 						local col=rc[2]
-						brd[row][col]={col=4,id=nil}
+						brd[row][col]={
+							col=4,id=nil
+						}
 					end
 				end
 			end
@@ -633,7 +863,7 @@ function on_brd(row,col)
 	)
 end
 
---gets board coords of curr piece
+--gets board coords of curr pc
 function brd_coords()
 	local coords={}
 	local shp=piece.shape
@@ -725,7 +955,9 @@ function rot_piece(dir)
 	local orig_var=piece.variant
 	if dir=="l" then
 		piece.variant+=1
-		if piece.variant>#piece.shape.vars then
+		if 
+			piece.variant>#piece.shape.vars 
+		then
 			piece.variant=1
 		end
 	else
@@ -822,6 +1054,11 @@ end
 --todo
 --[[
 
+find out why changing one
+cell id changes related ones
+
+surface line destroy bug
+
 don't destroy gold in lines
 
 create gold *after* 
@@ -845,6 +1082,70 @@ animation for good score
 
 ]]
 
+
+-->8
+--util
+function get_idx(tbl,val)
+	for i=1,#tbl do
+		if tbl[i]==val then
+			return i
+		end
+	end
+	return nil
+end
+
+function has_key(tbl,key)
+	return (
+		key~=nil and tbl[key]~=nil
+	)
+end
+
+function print_arr(arr,label)
+	local str=""
+	for elem in all(arr) do
+		if str=="" then
+			str=elem
+		else
+			str=str..","..elem
+		end
+	end
+	printh(
+		(label~=nil and label..": "
+		or "")..str
+	)
+end
+
+function print_tbl(tbl)
+	printh("to drop = {")
+	for k,v in pairs(to_drp) do
+		printh("	"..k..": "..v)
+	end
+	printh("}")
+end
+
+function print_brd_ids()
+	printh("****************")
+	for row in all(brd) do
+		local rowstr=""
+		for cell in all(row) do
+			local val
+			if cell.id~=nil then
+				val=tostr(cell.id)
+			else
+				val="   "
+			end
+		 if #val<2 then 
+		 	val="0"..val
+		 end
+		 if #val<3 then
+		 	val="0"..val
+   end
+			rowstr=rowstr.."| "..val
+		end
+		printh(rowstr.."|")
+	end
+	printh("****************")
+end
 
 __gfx__
 00000000111511111111111111111111119999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -883,8 +1184,8 @@ __sfx__
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+011900000c050000001305000000070500000013050000000c0500000013050000000705000000130500000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01190000000001f0501e0501f05020050000001f050000001e050000001f050000001d0501d0501d050000001c0501c0501c050000001b0501b0501b050000001a0501e0511f0511f0511f0521f0521f05200000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -938,5 +1239,5 @@ __sfx__
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 002000001885000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __music__
-00 01424344
+00 0a0b4344
 
