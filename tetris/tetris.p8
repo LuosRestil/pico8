@@ -42,14 +42,7 @@ function _update()
 	if game_over then return end
 	
 	if flash_timer>0 then
-		flash_timer-=1
-		if flash_chg_timer>0 then
-			flash_chg_timer-=1
-			if flash_chg_timer==0 then
-				flash_chg_timer=flash_rate
-				flash=not flash
-			end
-		end
+		update_flash()
 	else
 		flash=false
 	end
@@ -64,42 +57,20 @@ function _update()
 	
 	--line destroy
 	if line_destroy then
-		ld_timer+=dt
-		if ld_timer>ld_dur then
-			ld_timer=0
-			ft=0
-			line_destroy=false
-			increment_lines()
-			increment_score()
---			fill_destroyed()
-			fill_destroyed()
-			decay_px={}
-			for psys in all(psyses) do
-				psys.active=false
-			end
-			exploding=false
-		else
-			decay_lines()
-			if 
-				#to_destroy==4 and 
-				not exploding 
-			then
-				explode_lines()
-				exploding=true
-				init_flash()
-			end
-		end
+		handle_destroy(dt)
 		return
 	end
-	local destroy_psyses=true
+	local psyses_done=true
+
+	--particles
 	for psys in all(psyses) do
 		if #psys.ps>0 then
-			destroy_psyses=false
-			goto end_destroy_check
+			psyses_done=false
+			goto end_psys_check
 		end
 	end
-	::end_destroy_check::
-	if destroy_psyses then
+	::end_psys_check::
+	if psyses_done then
 		psyses={}
 	end
 	
@@ -116,10 +87,16 @@ function _update()
 		drop_piece()
 	end
 	
-	if btnp(➡️) and can_move("r") then
+	if 
+		btnp(➡️) and 
+		can_move("r") 
+	then
 		move_piece("r")
 	end
-	if btnp(⬅️) and can_move("l") then
+	if 
+		btnp(⬅️) and 
+		can_move("l") 
+	then
 		move_piece("l")
 	end
 	if btnp(🅾️) then
@@ -127,7 +104,7 @@ function _update()
 	end
 	if btnp(❎) then
 		rot_piece("r")
-		--for play testing...
+
 		--stick on demand
 		--next_piece.shape=pieces[4]
 	end
@@ -149,7 +126,13 @@ function _draw()
 	end
 
 	--board bg
-	rectfill(xpad,ypad,xpad+pcsz*w,ypad+pcsz*h,0)
+	rectfill(
+		xpad,
+		ypad,
+		xpad+pcsz*w,
+		ypad+pcsz*h,
+		0
+	)
 	
 	--game over
 	if game_over then
@@ -200,8 +183,16 @@ function _draw()
 	local vars=shp.vars
 	local v=vars[1]
 	for b in all(v) do
-		local x=(b[1]-1)*pcsz+108+shp.np_pad[1]
-		local y=(b[2]-1)*pcsz+25+shp.np_pad[2]
+		local x=
+			(b[1]-1)*
+			pcsz+
+			108+
+			shp.np_pad[1]
+		local y=
+			(b[2]-1)*
+			pcsz+
+			25+
+			shp.np_pad[2]
 		sspr(spr_pos,0,6,6,x,y)
 	end
 	
@@ -240,6 +231,45 @@ function init_flash()
 	flash_timer=flash_duration
 	flash_chg_timer=flash_rate
 end
+
+function update_flash()
+	flash_timer-=1
+	if flash_chg_timer>0 then
+		flash_chg_timer-=1
+		if flash_chg_timer==0 then
+			flash_chg_timer=flash_rate
+			flash=not flash
+		end
+	end
+end
+
+function handle_destroy(dt)
+	ld_timer+=dt
+	if ld_timer>ld_dur then
+		ld_timer=0
+		ft=0
+		line_destroy=false
+		increment_lines()
+		increment_score()
+		fill_destroyed()
+		decay_px={}
+		for psys in all(psyses) do
+			psys.active=false
+		end
+		exploding=false
+	else
+		decay_lines()
+		if 
+			#to_destroy==4 and 
+			not exploding 
+		then
+			explode_lines()
+			exploding=true
+			init_flash()
+		end
+	end
+end
+
 -->8
 --board
 function init_board()
@@ -266,7 +296,6 @@ function check_lines()
 				goto continue
 			end
 		end
-		--todo use set?
 		add(to_destroy,row)
 		::continue::
 	end
@@ -276,10 +305,14 @@ end
 function decay_lines()
 	for row in all(to_destroy) do
 		for i=1,30 do
-			local x=rnd(10*pcsz)+xpad
-			local y=rnd(6)+ypad+(row-1)*pcsz
-			local brd_val=get_brd_val(x,y)
-			if brd_val.col~=4 then
+			local x=
+				rnd(10*pcsz)+
+				xpad
+			local y=
+				rnd(6)+ypad+
+				(row-1)*pcsz
+			local cell=get_cell_at(x,y)
+			if not is_gold(cell) then
 				add(decay_px,{x=x,y=y})
 			end
 		end
@@ -294,7 +327,7 @@ function px_to_grid(x,y)
 	return {row,col}
 end
 
-function get_brd_val(x,y)
+function get_cell_at(x,y)
 	local pos=px_to_grid(x,y)
 	return brd[pos[1]][pos[2]]
 end
@@ -323,24 +356,37 @@ function increment_lines()
 	lvl=new_lvl
 end
 
-local lines_base_score={40,100,300,1200}
+local lines_base_score={
+	40,100,300,1200
+}
 
+--string arithmetic
 function increment_score()
 	local l=#to_destroy
 	local base=lines_base_score[l]
-	local to_add=tostr(base*(lvl+1))
-	
+	local to_add=
+		tostr(base*(lvl+1))
 	local carry=0
 	local res=""
 	local slen=#score
 	local talen=#to_add
 	local maxlen=max(slen,talen)
 	for i=0,maxlen-1 do
-		local dig1=sub(score,max(slen-i,0),max(slen-i,0))
-		dig1=(dig1=="" and "0" or dig1)
+		local dig1=sub(
+			score,
+			max(slen-i,0),
+			max(slen-i,0)
+		)
+		dig1=
+			(dig1=="" and "0" or dig1)
 		dig1=tonum(dig1)
-		local dig2=sub(to_add,max(talen-i,0),max(talen-i,0))
-		dig2=(dig2=="" and "0" or dig2)
+		local dig2=sub(
+			to_add,
+			max(talen-i,0),
+			max(talen-i,0)
+		)
+		dig2=
+			(dig2=="" and "0" or dig2)
 		dig2=tonum(dig2)
 		local sum=dig1+dig2+carry
 		carry=flr(sum/10)
@@ -353,36 +399,33 @@ function increment_score()
 end
 
 function fill_destroyed()
---	printh("fill destroyed")
---	print_arr(to_destroy,"to destroy")
 	local drop_dist=0
 	local to_drp={}
 	
 	--destroy or flag
 	for row=#brd,1,-1 do
---		printh(
---			"processing row: "..row
---		)
 		--destroy
 		if 
 			get_idx(to_destroy,row)~=nil 
 		then
---			printh("destroy row")
 			drop_dist+=1
 			for col=1,#brd[row] do
 				local cell=brd[row][col]
 				if not is_gold(cell) then
---					printh("set cell to empty:"..row..","..col)
-					if to_drp[cell.id]~=nil then
+					if 
+						to_drp[cell.id]~=nil 
+					then
 						--potential split pc
 						re_id_above(cell.id,row)
 					end
-					brd[row][col]={col=0,id=nil}
+					brd[row][col]={
+						col=0,
+						id=nil
+					}
 				end
 			end
 		else
 			--flag pcs to drop
---			printh("flag cells to drop")
 			for col=1,#brd[row] do
 				local id=brd[row][col].id
 				if
@@ -390,7 +433,6 @@ function fill_destroyed()
 					to_drp[id]==nil
 				then
 					to_drp[id]=drop_dist
---					printh("flagged: "..id)
 				end
 			end
 		end
@@ -400,7 +442,6 @@ function fill_destroyed()
 	
 	--pass for dropping
 	for row=#brd,1,-1 do
---		printh("processing row "..row)
 		--drop gold
 		for col=1,#brd[row] do
 			local cell=brd[row][col]
@@ -412,35 +453,27 @@ function fill_destroyed()
 		--drop pieces
 		local loop=true
 		while loop do
---			printh("drop loop")
 			loop=false
 
 			for col=1,#brd[row] do
---				printh("col: "..col)
 				local cell=brd[row][col]
 				local id=cell.id or "nil"
---				printh("pc "..id)
 				if has_key(to_drp,id) then
---					printh(
---						"pc flagged, id:"..id
---					)
-					local pot=pot_drop_dist(id)
+					local pot=pot_drop_dst(id)
 					local desired=to_drp[id]
-					local actual=min(pot,desired)
---					printh("pot: "..pot..", desired: "..desired..", actual: "..actual)
+					local actual=min(
+						pot,
+						desired
+					)
 					if actual>0 then
---						printh("dropping")
 						drop(cell,actual)
 						del(to_drp,id)
---						print_arr(pcs_2_drop, "pcs_2_drop after del")
 						loop=true
 					end
 				end
 			end
 		end
 	end
-	
---	print_brd_ids()
 end
 
 --handle pcs split by destroy
@@ -462,17 +495,17 @@ function re_id_above(id,row)
 	local changed=false
 	for coord in all(found) do
 		local r,c=coord.r,coord.c
---		printh("changing cell "..r..":"..c)
 		local cell=brd[r][c]
---		printh("old id: "..cell.id)
---		cell.id=pc_id*-1
 
 		--find real cause for
 		--multiple ids changing,
 		--but for a temp fix...
-		brd[r][c]={col=cell.col,id=pc_id*-1}
+		brd[r][c]={
+			col=cell.col,
+			id=pc_id*-1
+		}
+--		cell.id=pc_id*-1
 		
---		printh("new id: "..cell.id)
 		changed=true
 	end
 	if changed then pc_id+=1 end
@@ -482,12 +515,13 @@ end
 
 --get potential drop distance
 --for a given piece
-function pot_drop_dist(id)
+function pot_drop_dst(id)
 	local min_dist=999
-	local pc_coords=get_pc_coords(id)
+	local pc_coords=
+		get_pc_coords(id)
 	for coord in all(pc_coords) do
-		local dist_blw=get_dist_blw(coord,id)
---		printh("dist_blw:"..dist_blw)
+		local dist_blw=
+			get_dist_blw(coord,id)
 		if dist_blw<min_dist then
 			min_dist=dist_blw
 		end		
@@ -528,7 +562,13 @@ function get_pc_coords(id)
 		for col=1,#brd[1] do
 			local cell=brd[row][col]
 			if cell.id==id then
-				add(coords,{row=row,col=col})
+				add(
+					coords,
+					{
+						row=row,
+						col=col
+					}
+				)
 			end
 		end
 	end
@@ -536,7 +576,8 @@ function get_pc_coords(id)
 end
 
 function drop(cell,dist)
-	local pc_coords=get_pc_coords(cell.id)
+	local pc_coords=
+		get_pc_coords(cell.id)
 	for coord in all(pc_coords) do
 		local row=coord.row
 		local col=coord.col
@@ -554,7 +595,8 @@ function drop_gold(row,col)
 			on_brd(row+1,col) and
 			is_empty(brd[row+1][col])
 		then
-			brd[row+1][col]=brd[row][col]
+			brd[row+1][col]=
+				brd[row][col]
 			brd[row][col]={col=0,id=nil}
 			col+=1
 		else
@@ -571,7 +613,6 @@ function is_gold(cell)
 	return cell.col==4
 end
 
---2,3,4,6,8,9,10,11,12,14,15
 local pals = {
 	{2,3},--purp,dkgrn
 	{11,9},--ltgrn,orng
@@ -586,7 +627,8 @@ local pals = {
 local next_pal_idx=1
 
 function level_up()
-	local next_pal=pals[next_pal_idx]
+	local next_pal=
+		pals[next_pal_idx]
 	pal(12,next_pal[1])
 	pal(14,next_pal[2])
 	next_pal_idx+=1
@@ -718,7 +760,6 @@ function anchor()
 		piece.id
 	)
 	if (gold_mode) make_gold() 
---	print_brd_ids()
 end
 
 function make_gold()
@@ -867,7 +908,8 @@ end
 function brd_coords()
 	local coords={}
 	local shp=piece.shape
-	local var=shp.vars[piece.variant]
+	local var=
+		shp.vars[piece.variant]
 	for s in all(var) do
 		x=s[1]+piece.loc[1]
 		y=s[2]+piece.loc[2]
@@ -910,7 +952,8 @@ end
 
 function move_piece(dir)
 	if can_move(dir) then
-		local amt=dir=="l" and -1 or 1
+		local amt=
+			dir=="l" and -1 or 1
 		piece.loc[1]+=amt
 	end
 end
@@ -956,14 +999,16 @@ function rot_piece(dir)
 	if dir=="l" then
 		piece.variant+=1
 		if 
-			piece.variant>#piece.shape.vars 
+			piece.variant>
+			#piece.shape.vars 
 		then
 			piece.variant=1
 		end
 	else
 		piece.variant-=1
 		if piece.variant<1 then
-			piece.variant=#piece.shape.vars
+			piece.variant=
+				#piece.shape.vars
 		end
 	end
 
@@ -975,7 +1020,9 @@ end
 function valid()	
 	local coords=brd_coords()
 	for c in all(coords) do
-		if c[1]<1 or c[1]>#brd[1] then
+		if 
+			c[1]<1 or c[1]>#brd[1] 
+		then
 			return false
 		end
 		if c[2]>#brd then
@@ -984,8 +1031,8 @@ function valid()
 		if c[2]<1 then
 			goto continue
 		end
-		local bc=brd[c[2]][c[1]]
-		if bc.col~=0 then
+		local cell=brd[c[2]][c[1]]
+		if not is_empty(cell) then
 			return false
 		end
 		::continue::
@@ -1020,7 +1067,10 @@ function update_psys(psys)
 	end
 	if psys.active then
 		for i=1,3 do
-			add(psys.ps, new_p(psys.x,psys.y))
+			add(
+				psys.ps,
+				new_p(psys.x,psys.y)
+			)
 		end
 	end
 end
@@ -1053,11 +1103,6 @@ end
 -->8
 --todo
 --[[
-
-find out why changing one
-cell id changes related ones
-
-surface line destroy bug
 
 don't destroy gold in lines
 
