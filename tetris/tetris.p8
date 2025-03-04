@@ -31,7 +31,7 @@ local flash_chg_timer=0
 local flash_rate=3
 local flash_duration=15
 pc_id=0
-gold_mode=false
+gold_mode=true
 
 function _init()
 	init_board()
@@ -792,7 +792,9 @@ function make_gold()
 					local rc=split(key,":")
 					local row=rc[1]
 					local col=rc[2]
+					
 					if (row==1) gold=false
+					
 					--add neighbors to queue
 					--todo dry up
 					local nrow
@@ -801,12 +803,12 @@ function make_gold()
 					--up
 					nrow=row-1
 					ncol=col
-					cell=brd[nrow][ncol]
 					if 
 						not on_brd(nrow,ncol) 
 					then
 						goto down
 					end
+					cell=brd[nrow][ncol]
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
@@ -822,12 +824,12 @@ function make_gold()
 					::down::
 					nrow=row+1
 					ncol=col
-					cell=brd[row][col]
 					if 
 						not on_brd(nrow,ncol) 
 					then
 						goto left
 					end
+					cell=brd[nrow][ncol]
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
@@ -843,12 +845,12 @@ function make_gold()
 					::left::
 					nrow=row
 					ncol=col-1
-					cell=brd[row][col]
 					if 
 						not on_brd(nrow,ncol) 
 					then
 						goto right
 					end
+					cell=brd[nrow][ncol]
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
@@ -864,12 +866,12 @@ function make_gold()
 					::right::
 					nrow=row
 					ncol=col+1
-					cell=brd[row][col]
 					if 
 						not on_brd(nrow,ncol) 
 					then
 						goto finish
 					end
+					cell=brd[nrow][ncol]
 					tag=nrow..":"..ncol
 					if (
 						not seen[tag] and
