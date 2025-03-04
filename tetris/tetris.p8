@@ -748,9 +748,13 @@ end
 function set_brd(col,id)
 	local coords=brd_coords()
 	for c in all(coords) do
-		brd[c[2]][c[1]]={
-			col=col,id=id
-		}
+		if c[2]>0 and c[1]>0 then
+			brd[c[2]][c[1]]={
+				col=col,id=id
+			}
+		else
+			trigger_game_over=true
+		end
 	end
 end
 
