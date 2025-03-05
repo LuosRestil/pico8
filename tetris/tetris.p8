@@ -749,15 +749,6 @@ end
 --todo
 --[[
 
-don't destroy gold in lines
-
-create gold *after* 
-	resolving destroyed lines
-	
-drop gold as far as possible
-
-destroy gold lines
-
 better game over
 
 title screen
