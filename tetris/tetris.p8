@@ -143,17 +143,17 @@ function _draw()
 	for i=1,h do
 		for j=1,w do
 			if brd[i][j]~=0 then
-				local col=brd[i][j]-1
+				local clr=brd[i][j]-1
 				local x=(j-1)*pcsz+xpad
 				local y=(i-1)*pcsz+ypad
-				sspr(16+(col*6),0,6,6,x,y) 
+				sspr(16+(clr*6),0,6,6,x,y) 
 			end
 		end
 	end
 	
 	--piece
-	local col=piece.shape.col-1
-	local spr_pos=16+col*6
+	local clr=piece.shape.clr-1
+	local spr_pos=16+clr*6
 	for c in all(brd_coords()) do
 		local x=(c[1]-1)*pcsz+xpad
 		local y=(c[2]-1)*pcsz+ypad
@@ -175,8 +175,8 @@ function _draw()
 	--next piece
 	rectfill(96,4,126,36,0)
 	print("next",104,8,7)
-	col=next_piece.shape.col-1
-	spr_pos=16+col*6
+	local clr=next_piece.shape.clr-1
+	spr_pos=16+clr*6
 	local pc=next_piece
 	local shp=pc.shape
 	local vars=shp.vars
@@ -432,7 +432,7 @@ function init_pieces()
 				{{0,0},{1,0},{1,1},{2,1}},
 				{{2,-1},{1,0},{2,0},{1,1}}
 			},
-			col=3,
+			clr=3,
 			np_pad={0,0}
 		},
 		--right zig
@@ -441,7 +441,7 @@ function init_pieces()
 				{{1,0},{2,0},{0,1},{1,1}},
 				{{1,-1},{1,0},{2,0},{2,1}}
 			},
-			col=2,
+			clr=2,
 			np_pad={0,0}
 		},
 		--box
@@ -449,7 +449,7 @@ function init_pieces()
 			vars={
 				{{0,0},{1,0},{0,1},{1,1}}
 			},
-			col=1,
+			clr=1,
 			np_pad={4,0}
 		},
 		--stick
@@ -458,7 +458,7 @@ function init_pieces()
 				{{0,0},{1,0},{2,0},{3,0}},
 				{{1,1},{1,0},{1,-1},{1,-2}}
 			},
-			col=1,
+			clr=1,
 			np_pad={-2,3},
 			shiftl=true
 		},
@@ -470,7 +470,7 @@ function init_pieces()
 				{{1,-1},{0,0},{1,0},{2,0}},
 				{{1,-1},{1,0},{2,0},{1,1}},
 			},
-			col=1,
+			clr=1,
 			np_pad={1,0},
 		},
 		--left ell
@@ -481,7 +481,7 @@ function init_pieces()
 				{{2,-1},{0,0},{1,0},{2,0}},
 				{{1,-1},{1,0},{1,1},{2,1}}
 			},
-			col=3,
+			clr=3,
 			np_pad={0,0}
 		},
 		--right ell
@@ -492,7 +492,7 @@ function init_pieces()
 				{{0,-1},{0,0},{1,0},{2,0}},
 				{{1,-1},{2,-1},{1,0},{1,1}}
 			},
-			col=2,
+			clr=2,
 			np_pad={0,0}
 		}
 	}
@@ -533,20 +533,11 @@ function anchor()
 	local coords=brd_coords()
 	for c in all(coords) do
 		if c[2]>0 and c[1]>0 then
-			brd[c[2]][c[1]]=piece.shape.col
+			brd[c[2]][c[1]]=piece.shape.clr
 		else
 			trigger_game_over=true
 		end
 	end
-end
-
-function on_brd(row,col)
-	return (
-		row>=1 and 
-		row<=#brd and
-		col>=1 and
-		col<=#brd[1]
-	)
 end
 
 --gets board coords of curr pc
@@ -729,7 +720,7 @@ end
 function new_p(x,y)
 	local p={
 		life=flr(rnd(10,30)),
-		col=rnd({8,9,10}),
+		clr=rnd({8,9,10}),
 		pos={x,y},
 		vel={rnd(4)-2,rnd(4)-2}
 	}
@@ -743,7 +734,7 @@ function update_p(p)
 end
 
 function draw_p(p)
-	pset(p.pos[1],p.pos[2],p.col)
+	pset(p.pos[1],p.pos[2],p.clr)
 end
 -->8
 --todo
@@ -762,7 +753,6 @@ save score with name input
 animation for good score
 
 ]]
-
 
 -->8
 --util
@@ -798,34 +788,10 @@ end
 
 function print_tbl(tbl)
 	printh("to drop = {")
-	for k,v in pairs(to_drp) do
+	for k,v in pairs(tbl) do
 		printh("	"..k..": "..v)
 	end
 	printh("}")
-end
-
-function print_brd_ids()
-	printh("****************")
-	for row in all(brd) do
-		local rowstr=""
-		for cell in all(row) do
-			local val
-			if cell.id~=nil then
-				val=tostr(cell.id)
-			else
-				val="   "
-			end
-		 if #val<2 then 
-		 	val="0"..val
-		 end
-		 if #val<3 then
-		 	val="0"..val
-   end
-			rowstr=rowstr.."| "..val
-		end
-		printh(rowstr.."|")
-	end
-	printh("****************")
 end
 
 __gfx__
