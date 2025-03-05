@@ -31,7 +31,6 @@ local flash_chg_timer=0
 local flash_rate=3
 local flash_duration=15
 pc_id=0
-gold_mode=false
 
 function _init()
 	init_board()
@@ -143,8 +142,8 @@ function _draw()
 	--board
 	for i=1,h do
 		for j=1,w do
-			if brd[i][j].col~=0 then
-				local col=brd[i][j].col-1
+			if brd[i][j]~=0 then
+				local col=brd[i][j]-1
 				local x=(j-1)*pcsz+xpad
 				local y=(i-1)*pcsz+ypad
 				sspr(16+(col*6),0,6,6,x,y) 
@@ -282,7 +281,7 @@ function new_board()
 	for i=1,20 do
 		local row={}
 		for j=1,10 do
-			add(row,{col=0,id=nil})
+			add(row,0)
 		end
 		add(nb,row)
 	end
@@ -292,7 +291,7 @@ end
 function check_lines()
 	for row=1,#brd do
 		for cell in all(brd[row]) do
-			if cell.col==0 then
+			if cell==0 then
 				goto continue
 			end
 		end
@@ -311,25 +310,9 @@ function decay_lines()
 			local y=
 				rnd(6)+ypad+
 				(row-1)*pcsz
-			local cell=get_cell_at(x,y)
-			if not is_gold(cell) then
-				add(decay_px,{x=x,y=y})
-			end
+			add(decay_px,{x=x,y=y})
 		end
 	end
-end
-
-function px_to_grid(x,y)
-	local brd_x=x-xpad
-	local brd_y=y-ypad
-	local row=flr(brd_y/pcsz)+1
-	local col=flr(brd_x/pcsz)+1
-	return {row,col}
-end
-
-function get_cell_at(x,y)
-	local pos=px_to_grid(x,y)
-	return brd[pos[1]][pos[2]]
 end
 
 function explode_lines()
@@ -399,218 +382,21 @@ function increment_score()
 end
 
 function fill_destroyed()
-	local drop_dist=0
-	local to_drp={}
-	
-	--destroy or flag
-	for row=#brd,1,-1 do
-		--destroy
-		if 
-			get_idx(to_destroy,row)~=nil 
-		then
-			drop_dist+=1
-			for col=1,#brd[row] do
-				local cell=brd[row][col]
-				if not is_gold(cell) then
-					if 
-						to_drp[cell.id]~=nil 
-					then
-						--potential split pc
-						re_id_above(cell.id,row)
-					end
-					brd[row][col]={
-						col=0,
-						id=nil
-					}
-				end
+	local nb=new_board()
+	for i=1,20 do
+		local shift=0
+		for row in all(to_destroy) do
+			if row==i then
+				goto continue
 			end
-		else
-			--flag pcs to drop
-			for col=1,#brd[row] do
-				local id=brd[row][col].id
-				if
-					id~=nil and
-					to_drp[id]==nil
-				then
-					to_drp[id]=drop_dist
-				end
-			end
+			if (row>i) shift+=1
 		end
-	end
 
+		nb[i+shift]=brd[i]
+		::continue::
+	end
 	to_destroy={}
-	
-	--pass for dropping
-	for row=#brd,1,-1 do
-		--drop gold
-		for col=1,#brd[row] do
-			local cell=brd[row][col]
-			if is_gold(cell) then
-				drop_gold(row,col)
-			end
-		end
-		
-		--drop pieces
-		local loop=true
-		while loop do
-			loop=false
-
-			for col=1,#brd[row] do
-				local cell=brd[row][col]
-				local id=cell.id or "nil"
-				if has_key(to_drp,id) then
-					local pot=pot_drop_dst(id)
-					local desired=to_drp[id]
-					local actual=min(
-						pot,
-						desired
-					)
-					if actual>0 then
-						drop(cell,actual)
-						del(to_drp,id)
-						loop=true
-					end
-				end
-			end
-		end
-	end
-end
-
---handle pcs split by destroy
---by re-iding pcs above line
---so they aren't marked as seen
-function re_id_above(id,row)
-	local found={}
-	local added=false
-	for r=row-1,1,-1 do
-		for c=1,#brd[1] do
-			local cell=brd[r][c]
-			if cell.id==id do
-				add(found,{r=r,c=c})
-				added=true
-			end
-		end
-		if not added then break end
-	end
-	local changed=false
-	for coord in all(found) do
-		local r,c=coord.r,coord.c
-		local cell=brd[r][c]
-
-		--find real cause for
-		--multiple ids changing,
-		--but for a temp fix...
-		brd[r][c]={
-			col=cell.col,
-			id=pc_id*-1
-		}
---		cell.id=pc_id*-1
-		
-		changed=true
-	end
-	if changed then pc_id+=1 end
-end
-
-
-
---get potential drop distance
---for a given piece
-function pot_drop_dst(id)
-	local min_dist=999
-	local pc_coords=
-		get_pc_coords(id)
-	for coord in all(pc_coords) do
-		local dist_blw=
-			get_dist_blw(coord,id)
-		if dist_blw<min_dist then
-			min_dist=dist_blw
-		end		
-	end
-	return min_dist
-end
-
-function get_dist_blw(coord,id)
-	local row=coord.row
-	local col=coord.col
-	local dist=0
-	local looking=true
-	while looking do
-		if 
-			on_brd(row+1,col) 
-			and
-			(
-				is_empty(brd[row+1][col])
-				or
-				brd[row+1][col].id==id
-			)
-		then
-			dist+=1
-			row+=1
-		else
-			looking=false
-		end
-	end
-	return dist
-end
-
-function get_pc_coords(id)
-	local coords={}
-	--we drop pc cells bottom up
-	--so we want to find
-	--lowest first
-	for row=#brd,1,-1 do
-		for col=1,#brd[1] do
-			local cell=brd[row][col]
-			if cell.id==id then
-				add(
-					coords,
-					{
-						row=row,
-						col=col
-					}
-				)
-			end
-		end
-	end
-	return coords
-end
-
-function drop(cell,dist)
-	local pc_coords=
-		get_pc_coords(cell.id)
-	for coord in all(pc_coords) do
-		local row=coord.row
-		local col=coord.col
-		brd[row][col]={col=0,id=nil}
-		brd[row+dist][col]=cell
-	end
-end
-
-function drop_gold(row,col)
-	local row=row
-	local col=col
-	local dropping=true
-	while dropping do
-		if 
-			on_brd(row+1,col) and
-			is_empty(brd[row+1][col])
-		then
-			brd[row+1][col]=
-				brd[row][col]
-			brd[row][col]={col=0,id=nil}
-			col+=1
-		else
-			dropping=false
-		end
-	end
-end
-
-function is_empty(cell)
-	return cell.col==0
-end
-
-function is_gold(cell)
-	return cell.col==4
+	brd=nb
 end
 
 local pals = {
@@ -726,7 +512,6 @@ function new_piece()
 			1
 		},
 		variant=1,
-		id=pc_id
 	}
 end
 
@@ -744,157 +529,13 @@ function drop_piece()
 	end
 end
 
---todo err here on death
-function set_brd(col,id)
+function anchor()
 	local coords=brd_coords()
 	for c in all(coords) do
 		if c[2]>0 and c[1]>0 then
-			brd[c[2]][c[1]]={
-				col=col,id=id
-			}
+			brd[c[2]][c[1]]=piece.shape.col
 		else
 			trigger_game_over=true
-		end
-	end
-end
-
-function anchor()
-	set_brd(
-		piece.shape.col,
-		piece.id
-	)
-	if (gold_mode) make_gold() 
-end
-
-function make_gold()
-	local seen={}
-	for i=1,#brd do
-		for j=1,#brd[1] do
-			local val=brd[i][j].col
-			--every time we see
-			--a new empty space,
-			--flood fill
-			if 
-				val==0 and not 
-				seen[i..":"..j] 
-			do
-				local gold=true
-				local area={}
-				local q={}
-				local tag=i..":"..j
-				add(q,tag)
-				seen[tag]=true
-				while #q>0 do
-					--process queue entry
-					local key=q[1]
-					del(q,key)
-					add(area,key)
-					local rc=split(key,":")
-					local row=rc[1]
-					local col=rc[2]
-					if (row==1) gold=false
-					--add neighbors to queue
-					--todo dry up
-					local nrow
-					local ncol
-					local cell
-					--up
-					nrow=row-1
-					ncol=col
-					cell=brd[nrow][ncol]
-					if 
-						not on_brd(nrow,ncol) 
-					then
-						goto down
-					end
-					tag=nrow..":"..ncol
-					if (
-						not seen[tag] and
-						is_empty(cell)
-					) then
-						seen[tag]=true
-						add(q,tag)
-					end
-					if is_gold(cell) then
-						gold=false
-					end
-					--down
-					::down::
-					nrow=row+1
-					ncol=col
-					cell=brd[row][col]
-					if 
-						not on_brd(nrow,ncol) 
-					then
-						goto left
-					end
-					tag=nrow..":"..ncol
-					if (
-						not seen[tag] and
-						is_empty(cell)
-					) then
-						seen[tag]=true
-						add(q,tag)
-					end
-					if is_gold(cell) then
-						gold=false
-					end
-					--left
-					::left::
-					nrow=row
-					ncol=col-1
-					cell=brd[row][col]
-					if 
-						not on_brd(nrow,ncol) 
-					then
-						goto right
-					end
-					tag=nrow..":"..ncol
-					if (
-						not seen[tag] and
-						is_empty(cell)
-					) then
-						seen[tag]=true
-						add(q,tag)
-					end
-					if is_gold(cell) then
-						gold=false
-					end
-					--right
-					::right::
-					nrow=row
-					ncol=col+1
-					cell=brd[row][col]
-					if 
-						not on_brd(nrow,ncol) 
-					then
-						goto finish
-					end
-					tag=nrow..":"..ncol
-					if (
-						not seen[tag] and
-						is_empty(cell)
-					) then
-						seen[tag]=true
-						add(q,tag)
-					end
-					if is_gold(cell) then
-						gold=false
-					end
-					::finish::
-				end
-				
-				if gold then
-					for key in all(area) do
-						local rc=split(key,":")
-						local row=rc[1]
-						local col=rc[2]
-						brd[row][col]={
-							col=4,id=nil
-						}
-					end
-				end
-			end
 		end
 	end
 end
@@ -934,7 +575,7 @@ function piece_can_drop()
 			goto continue
 		end
 		local blw=brd[cy+1][cx]
-		if blw.col~=0 then
+		if blw~=0 then
 			return false
 		end
 		::continue::
@@ -947,7 +588,7 @@ function piece_can_spawn()
 	for c in all(coords) do
 		local y=c[2]
 		local brdno=brd[c[2]][c[1]]
-		if brdno.col~=0 then
+		if brdno~=0 then
 			return false
 		end
 	end
@@ -974,7 +615,7 @@ function can_move(dir)
 				goto continue 
 			end
 			local blw=brd[c[2]][c[1]-1]
-			if blw.col~=0 then
+			if blw~=0 then
 				return false
 			end
 			::continue::
@@ -989,7 +630,7 @@ function can_move(dir)
 				goto continue
 			end
 			local blw=brd[c[2]][c[1]+1]
-			if blw.col~=0 then
+			if blw~=0 then
 				return false
 			end
 			::continue::
@@ -1036,7 +677,7 @@ function valid()
 			goto continue
 		end
 		local cell=brd[c[2]][c[1]]
-		if not is_empty(cell) then
+		if cell~=0 then
 			return false
 		end
 		::continue::
