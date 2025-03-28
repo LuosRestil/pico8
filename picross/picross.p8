@@ -8,13 +8,19 @@ grid=nil
 pos={r=1,c=1}
 lfao=nil --last frame action o
 lfax=nil --last frame action x
+won=false
 
 function _init()
 	grid = make_grid()
 	load_imgs()
 end
 
-function _update()	
+function _update()
+	if check_win() then
+		won=true
+		return
+	end
+
 	if btnp(⬅️) do
 		pos.c-=1
 		if (pos.c<1) pos.c=dim
@@ -54,8 +60,9 @@ function _update()
 end
 
 function _draw()
-	cls(white)
+	cls(black)
 	
+	--grid
 	for r=1,#grid do
 		for c=1,#grid[1] do
 			local x,y=rc_to_coord(r,c)
@@ -70,32 +77,67 @@ function _draw()
 		end
 	end
 	
-	--draw numbers
-	for i=1,#img.nums.rows do
-		local x,y=rc_to_coord(i,16)
-		y+=1
-		x+=2
-		local nums=img.nums.rows[i]
-		for num in all(nums) do
-			print(num,x,y)
-			x+=6
-			if (num>9) x+=4
-		end
-	end
-	for i=1,#img.nums.cols do
-		local x,y=rc_to_coord(16,i)
-		y+=2
-		local nums=img.nums.cols[i]
-		for num in all(nums) do
-			print(num,x,y)
-			y+=6
-		end
-	end
-	
+	--player position
 	local x,y=rc_to_coord(
 		pos.r,pos.c
 	)
 	rect(x,y,x+csize,y+csize,10)
+	
+	--numbers
+	-- based on nemonemo
+	--rows
+	for i=1,#img.nums.rows do
+		local x,y=rc_to_coord(i,16)
+		y+=1
+		x+=2
+		local clr=1
+		local nums=img.nums.rows[i]
+		for num in all(nums) do
+			if num>9 then
+				print("|",x-1,y,clr)
+				if num%10==1 then
+					print("|",x+1,y,clr)
+				else
+					print(num%10,x+2,y,clr)
+					x+=2
+				end
+			else
+				if num==1 then
+					print("|",x-1,y,clr)
+					x-=2
+				else
+					print(num,x,y,clr)
+				end
+			end
+			x+=6
+		end
+	end
+	--cols
+	for i=1,#img.nums.cols do
+		local x,y=rc_to_coord(16,i)
+		y+=2
+		x+=2
+		local clr=1
+		local nums=img.nums.cols[i]
+		for num in all(nums) do
+			if num==11 then
+				print("|",x-1,y,clr)
+				print("|",x+1,y,clr)
+			elseif num>9 then
+				print("|",x-2,y,clr)
+				print(num%10,x+1,y,clr)
+			elseif num==1 then
+			 print("|",x,y,clr)
+			else
+				print(num,x,y,clr)
+			end
+			y+=6
+		end
+	end
+		
+	if won then
+		print("won",100,100,red)
+	end
 end
 
 function rc_to_coord(r,c)
@@ -114,6 +156,23 @@ function make_grid()
 		add(grid,row)
 	end
 	return grid
+end
+
+function check_win()
+	for i=1,#img.img do
+		for j=1,#img.img[1] do
+			local imgval=img.img[i][j]
+			local gridval=grid[i][j]
+			if 
+				(imgval==1 and gridval~=1)
+				or
+				(imgval~=1 and gridval==1)
+			then
+				return false
+			end
+		end
+	end
+	return true
 end
 -->8
 --imgs
