@@ -1,29 +1,29 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
-msg=nil
+msg=nil --debug message
 pcsz=6 --piece size
 local w=10 --board width
 local h=20 --board height
 xpad=34 --board marg. l
 ypad=4 --board marg. top
-slow_fr=0.01
+slow_fr=0.01 --slow fall rate
 max_slow_fr=0.93
-local fast_fr=1
-local fr=slow_fr
+local fast_fr=1 --fast fall rate
+local fr=slow_fr --fall rate
 local ft=0 --fall timer
 local lt=0 --last time
 trigger_game_over=false
-game_over=false
 trigger_line_destroy=false
 line_destroy=false
-local ld_timer=0
-local ld_dur=0.5
+local ld_timer=0 --line destroy timer
+local ld_dur=0.5 --line destroy duration
 lvl=0
 score="0"
 lines=0
 decay_px={}
-psyses={}
+psyses={} --particle systems
+--line destroy flash effect
 local exploding=false
 local flash_timer=0
 local flash=false
@@ -32,25 +32,38 @@ local flash_rate=3
 local flash_duration=15
 pc_id=0
 state="title"
-
-function _init()
-
-end
+--title/gameover text
+local flsht=0 --flash timer
+local flsh=false --flash state
+local flshr=15 --flash duration
 
 function start()
 	init_board()
 	init_pieces()
+	slow_fr=0.1
+	fr=slow_fr
+	ft=0
 	lt=time()
+	lvl=0
+	score="0"
+	lines=0
+	reset_pal()
 end
 
 function _update()
+	if flsht>flshr then
+		flsh=not flsh
+		flsht=0
+	end
+	flsht+=1
+	
 	if state=="title" then 
 		update_title()
 		return
 	end
-	if state=="gameover" then 
-		update_game_over()
-		return --todo restart
+	if state=="gameover" then
+		update_gameover()
+		return
 	end
 	
 	if flash_timer>0 then
@@ -133,10 +146,6 @@ function _draw()
 		draw_title()
 		return
 	end
-	if state=="gameover" then
-		draw_game_over()
-		--todo return
-	end
 	cls()
 	if flash then
 		rectfill(0,0,128,128,7)
@@ -154,31 +163,41 @@ function _draw()
 	)
 	
 	--game over
-	if game_over then
-		print("game over",47,64,8)
-		return
-	end
-	
-	--board
-	for i=1,h do
-		for j=1,w do
-			if brd[i][j]~=0 then
-				local clr=brd[i][j]-1
-				local x=(j-1)*pcsz+xpad
-				local y=(i-1)*pcsz+ypad
-				sspr(16+(clr*6),0,6,6,x,y) 
+	if state=="gameover" then
+		print("game over",47,50,8)
+		
+		if not flsh then
+			local txt="press 🅾️"
+			print(txt,
+				hcenter(txt)+1,63,7
+			)
+			txt = "to play again"
+			print(txt,
+				hcenter(txt)+1,73,7
+			)
+		end
+	else
+		--board
+		for i=1,h do
+			for j=1,w do
+				if brd[i][j]~=0 then
+					local clr=brd[i][j]-1
+					local x=(j-1)*pcsz+xpad
+					local y=(i-1)*pcsz+ypad
+					sspr(16+(clr*6),0,6,6,x,y) 
+				end
 			end
 		end
-	end
-	
-	--piece
-	local clr=piece.shape.clr-1
-	local spr_pos=16+clr*6
-	for c in all(brd_coords()) do
-		local x=(c[1]-1)*pcsz+xpad
-		local y=(c[2]-1)*pcsz+ypad
-		if y>=0 then
-			sspr(spr_pos,0,6,6,x,y)
+		
+		--piece
+		local clr=piece.shape.clr-1
+		local spr_pos=16+clr*6
+		for c in all(brd_coords()) do
+			local x=(c[1]-1)*pcsz+xpad
+			local y=(c[2]-1)*pcsz+ypad
+			if y>=0 then
+				sspr(spr_pos,0,6,6,x,y)
+			end
 		end
 	end
 	
@@ -241,7 +260,6 @@ function _draw()
 	end
 	
 	if trigger_game_over then
-		game_over=true
 		state="gameover"
 	end
 end
@@ -442,6 +460,12 @@ function level_up()
 	if next_pal_idx>#pals then
 		next_pal_idx=1
 	end
+end
+
+function reset_pal()
+	next_pal_idx=1
+	pal(12,12)
+	pal(14,14)
 end
 -->8
 --pieces
@@ -761,15 +785,15 @@ end
 --todo
 --[[
 
-better game over
-
-sound
+addl. sound (pc move, gameover)
+music
 
 choose level
+choose music
 
 save score with name input
 
-animation for good score
+animation for good score?
 
 ]]
 
@@ -813,22 +837,16 @@ function print_tbl(tbl)
 	printh("}")
 end
 
--->8
-local ft=0 --flash timer
-local flsh=false --flash state
-local fr=15 --flash duration
+function hcenter(txt)
+	return 64-#txt*2
+end
 
+-->8
 function update_title()
 	if btnp(🅾️) then
 		state="play"
 		start()
 	end
-	
-	if ft>fr then
-		flsh=not flsh
-		ft=0
-	end
-	ft+=1
 end
 
 function draw_title()
@@ -845,22 +863,22 @@ function draw_title()
 		7
 	)
 	if not flsh then
-		print("press 🅾️ to start",
-			30,69,0
+		local txt="press 🅾️ to start"
+		print(txt,
+			hcenter(txt),69,0
 		)
-		print("press 🅾️ to start",
-			31,70,7
+		print(txt,
+			hcenter(txt),70,7
 		)
 	end
 end
 
---todo game over animation
-function update_game_over()
-
-end
-
-function draw_game_over()
-
+function update_gameover()
+	if btnp(🅾️) then
+		state="play"
+		trigger_game_over=false
+		start()
+	end
 end
 __gfx__
 00000000111511111111111111111111119999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
