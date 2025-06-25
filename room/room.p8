@@ -9,6 +9,9 @@ local ptr={x=64,y=64}
 local ptr_spr={x=0,y=8,dim=3}
 local ptr_spr_l={x=3,y=8,dim=5}
 local msg=nil
+local inv_btn
+local inv_open=false
+local inv_idx=1
 dbg="" --debug message
 draw_hitboxes=true
 
@@ -23,10 +26,19 @@ function _init()
 		end
 	end
 	room="start"
+	init_inv_btn()
 end
 
 function _update()
 	dbg=nil
+	
+	--different input handling
+	--for inventory
+	if inv_open then
+		update_inv()
+		return
+	end
+	
 	if
 		btn(➡️) or
 		btn(⬅️) or
@@ -51,16 +63,40 @@ function _update()
 	
 	hover(rooms[room])
 	
-	if 
-		btnp(🅾️) and 
-		hovered_item~=nil 
-	then
-		msg=hovered_item.txt
+	if hovered_item~=nil then
+			if btnp(🅾️) then
+				hovered_item:activate()
+			elseif btnp(❎) then
+				msg=hovered_item.txt
+			end
 	end
+end
+
+function update_inv()
 	if 
-		btnp(❎) and 
-		hovered_item~=nil then
-		hovered_item:activate()
+		btn(➡️) and
+		inv_idx<10
+	then 
+		inv_idx+=1
+	elseif 
+		btn(⬅️) and
+		inv_idx>1
+	then 
+		inv_idx-=1
+	elseif 
+		btn(⬆️) and
+		inv_idx<6
+	then 
+		inv_idx+=5
+	elseif 
+		btn(⬇️) and
+		inv_idx>5
+	then 
+		inv_idx-=5
+	elseif btn(🅾️) then
+		--todo select item
+	elseif btn(❎) then
+		inv_open=false	
 	end
 end
 
@@ -68,18 +104,16 @@ function _draw()
 	cls(clrs.purple)
 	assert(rooms[room]~=nil)
 	draw_room(rooms[room])
-	draw_ptr(ptr)
-	if dbg~=nil then
-		print(dbg,clrs.orange)
+	draw_inv_btn()
+	if inv_open then
+		draw_inv()
+	else
+		draw_ptr(ptr)
+		draw_msg()
 	end
-	if hovered_item~=nil then
-		print(
-			hovered_item.name,
-			clrs.yellow)
-	end
-	if msg~=nil then
-		draw_msg(msg)
-	end
+	--debugging stuff
+	draw_dbg()
+	draw_hovered()
 end
 
 function draw_ptr()
@@ -128,6 +162,10 @@ function hover(room)
 			hovered_item=v
 		end
 	end
+	
+	if colliding(ptr,inv_btn) do
+		hovered_item=inv_btn
+	end
 end
 
 function colliding(ptr,item)
@@ -137,7 +175,8 @@ function colliding(ptr,item)
 		ptr.y<=item.pos.y+item.h
 end
 
-function draw_msg(msg)
+function draw_msg()
+	if msg==nil then return end
 	local lines=split(msg,"\n")
 	local longest=0
 	for l in all(lines) do
@@ -150,15 +189,95 @@ function draw_msg(msg)
 	local h=#lines*6
 	local padx=(128-w)/2
 	local pady=(128-h)/2
-
+	--background
 	rectfill(
 		padx,pady,
 		padx+w,pady+h,
 		clrs.blue)
+	--border
+	rect(
+		padx-1,pady-1,
+		padx+w+1,pady+h+1,
+		clrs.white)
+	--text
 	print(
 		msg,
 		padx+1,pady+1,
 		clrs.black)
+end
+
+function draw_dbg()
+	if dbg==nil then return end
+	print(dbg,0,0,clrs.orange)
+end
+
+function draw_hovered()
+	if hovered_item==nil then
+		return
+	end
+	print(
+		hovered_item.name,
+		0,6,
+		clrs.yellow)
+end
+
+function draw_inv()
+	local w=88
+	local h=25
+	local padx=(128-w)/2
+	local pady=(128-h)/2
+	--background
+	rectfill(
+		padx,pady,
+		padx+w,pady+h,
+		clrs.black)
+	--border
+	rect(
+		padx-1,pady-1,
+		padx+w+1,pady+h+1,
+		clrs.white)
+	--title
+	print(
+		"inventory",
+		padx+2,pady+2,
+		clrs.white)
+end
+
+function init_inv_btn()
+	inv_btn={
+		name="inventory button",
+		pos={x=119,y=0},
+		w=8,h=8,
+		draw=function(self)
+			if hovered_item==self then
+				rectfill(
+					self.pos.x,
+					self.pos.y,
+					self.pos.x+self.w,
+					self.pos.y+self.h,
+					clrs.white)
+			end
+			rect(
+				self.pos.x,
+				self.pos.y,
+				self.pos.x+self.w,
+				self.pos.y+self.h,
+				clrs.navy)
+			print("i",
+				self.pos.x+3,self.pos.y+2,
+				clrs.navy)
+		end,
+		activate=function(self) 
+			inv_open=true
+		end	
+	}
+end
+
+function draw_inv_btn()
+	inv_btn:draw()
+--	if draw_hitboxes then
+--		draw_hitbox(inv_btn)
+--	end
 end
 -->8
 --rooms
@@ -197,32 +316,15 @@ gotta boogie]],
 end
 
 function draw_hitbox(item)
-	line(
+	rect(
 		item.pos.x,
 		item.pos.y,
 		item.pos.x+item.w,
-		item.pos.y,
-		clrs.red)
-	line(
-		item.pos.x+item.w,
-		item.pos.y,
-		item.pos.x+item.w,
 		item.pos.y+item.h,
-		clrs.red)
-	line(
-		item.pos.x+item.w,
-		item.pos.y+item.h,
-		item.pos.x,
-		item.pos.y+item.h,
-		clrs.red)
-	line(
-		item.pos.x,
-		item.pos.y+item.h,
-		item.pos.x,
-		item.pos.y,
 		clrs.red)
 end
 -->8
+--clrs
 clrs={
 	black=0,
 	navy=1,
