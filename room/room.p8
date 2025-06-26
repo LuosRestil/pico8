@@ -73,25 +73,13 @@ function _update()
 end
 
 function update_inv()
-	if 
-		btn(➡️) and
-		inv_idx<10
-	then 
+	if btn(➡️) and inv_idx<10 then 
 		inv_idx+=1
-	elseif 
-		btn(⬅️) and
-		inv_idx>1
-	then 
+	elseif btn(⬅️) and inv_idx>1 then 
 		inv_idx-=1
-	elseif 
-		btn(⬆️) and
-		inv_idx<6
-	then 
+	elseif btn(⬆️) and inv_idx<6 then 
 		inv_idx+=5
-	elseif 
-		btn(⬇️) and
-		inv_idx>5
-	then 
+	elseif btn(⬇️) and inv_idx>5 then 
 		inv_idx-=5
 	elseif btn(🅾️) then
 		--todo select item
@@ -241,6 +229,8 @@ function draw_inv()
 		"inventory",
 		padx+2,pady+2,
 		clrs.white)
+	--todo slots
+	--todo items
 end
 
 function init_inv_btn()
