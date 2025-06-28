@@ -75,34 +75,12 @@ function _update()
 	end
 end
 
-function update_inv()
-	if btnp(➡️) and inv_idx<10 then 
-		inv_idx+=1
-	elseif btnp(⬅️) and inv_idx>1 then 
-		inv_idx-=1
-	elseif btnp(⬆️) and inv_idx>5 then 
-		inv_idx-=5
-	elseif btnp(⬇️) and inv_idx<6 then 
-		inv_idx+=5
-	elseif btnp(🅾️) then
-		active_item=inv[inv_idx]
-	elseif btnp(❎) then
-		inv_open=false	
-	end
-end
-
 --todo
 --[[
-*cursor is active item
-*exclamation point indicates
-	hover
 *add item title to 
 	inventory window
 *add item description to 
 	inventory window
-*make inventory window one
-	long row? then we can fit
-	the description underneath.
 ]]
 
 function _draw()
@@ -113,23 +91,50 @@ function _draw()
 	if inv_open then
 		draw_inv()
 	else
-		draw_ptr(ptr)
+		draw_ptr()
 		draw_msg()
 	end
 	--debugging stuff
 	draw_dbg()
-	draw_hovered()
+--	draw_hovered()
 end
 
 function draw_ptr()
-	if hovered_item==nil then
-		draw_normal_ptr()
+	if active_item~=nil then
+		draw_item_ptr()
 	else
-		draw_hover_ptr()
+		draw_normal_ptr()
 	end
-end 
+end
+
+function draw_item_ptr()
+	assert(active_item~=nil)
+	spr(
+		active_item.sp,
+		ptr.x-4,ptr.y-4)
+	if hovered_item~=nil then
+		draw_hover_bang()
+	end
+end
+
+function draw_hover_bang()
+	line(
+		ptr.x+5,ptr.y-5,
+		ptr.x+5,ptr.y-3,
+		clrs.yellow)
+	pset(ptr.x+5,ptr.y-1,
+		clrs.yellow)
+end
 
 function draw_normal_ptr()
+	if hovered_item==nil then
+		draw_sm_ptr()
+	else
+		draw_lg_ptr()
+	end
+end
+
+function draw_sm_ptr()
 	sspr(
 		ptr_spr.x,
 		ptr_spr.y,
@@ -139,7 +144,7 @@ function draw_normal_ptr()
 		ptr.y-1)
 end
 
-function draw_hover_ptr()
+function draw_lg_ptr()
 	sspr(
 		ptr_spr_l.x,
 		ptr_spr_l.y,
@@ -226,148 +231,7 @@ function draw_hovered()
 		clrs.yellow)
 end
 
-function draw_inv()
-	local w=43
-	local h=24
-	local padx=(128-w)/2
-	local pady=(128-h)/2
-	--background
-	rectfill(
-		padx,pady,
-		padx+w,pady+h,
-		clrs.black)
-	--border
-	rect(
-		padx-1,pady-1,
-		padx+w+1,pady+h+1,
-		clrs.white)
-	--title
-	print(
-		"inventory",
-		padx+1,pady+1,
-		clrs.white)
-	--slots
-	line(
-		padx,pady+7,
-		padx+w,pady+7,
-		clrs.white)
-	line(
-		padx,pady+16,
-		padx+w,pady+16,
-		clrs.white)
-	for i=1,5 do
-		local x=padx+i*9-1
-		line(
-			x,pady+8,
-			x,pady+h,
-			clrs.white)
-	end
-	--items
-	for i,item in ipairs(inv) do
-		local col=(i-1)%5+1
-		local row=ceil(i/5)
-		local x=padx+(col-1)*9
-		local y=pady+8+(row-1)*9
-		spr(item.sp,x,y)
-	end
-	local col=(inv_idx-1)%5+1
-	local row=ceil(inv_idx/5)
-	local x=padx+(col-1)*9-1
-	local y=pady+row*9-2
-	dbg=""..inv_idx..","..col..","..row
-	rect(x,y,x+9,y+9,clrs.yellow)
-end
 
-function init_inv_btn()
-	inv_btn={
-		name="inventory button",
-		pos={x=119,y=0},
-		w=8,h=8,
-		draw=function(self)
-			if hovered_item==self then
-				rectfill(
-					self.pos.x,
-					self.pos.y,
-					self.pos.x+self.w,
-					self.pos.y+self.h,
-					clrs.white)
-			end
-			rect(
-				self.pos.x,
-				self.pos.y,
-				self.pos.x+self.w,
-				self.pos.y+self.h,
-				clrs.navy)
-			print("i",
-				self.pos.x+3,self.pos.y+2,
-				clrs.navy)
-		end,
-		activate=function(self) 
-			inv_open=true
-		end	
-	}
-end
-
-function draw_inv_btn()
-	inv_btn:draw()
---	if draw_hitboxes then
---		draw_hitbox(inv_btn)
---	end
-end
-
-function init_test_inv()
-	inv={
-		{
-			name="flower",
-			desc=[[it's a flower.
-smells nice.]],
-			sp=1,
-		},
-		{
-			name="tea",
-			desc=[[smells of bitter
-almonds.]],
-			sp=2,
-		},
-		{
-			name="screwdriver",
-			desc=[[equally useful for
-screwdriving and 
-screw-un-driving.]],
-			sp=3,
-		},
-		{
-			name="soy burger",
-			desc=[[no animals were
-harmed in the making
-of this game.]],
-			sp=4,
-		},
-		{
-			name="light bulb",
-			desc=[[in case you have
-a bright idea.]],
-			sp=17,
-		},
-		{
-			name="rabbit",
-			desc=[[can pull a magician
-out of its hat.]],
-			sp=18,
-		},
-		{
-			name="toy car",
-			desc=[[vroom, vroom.]],
-			sp=19,
-		},
-		{
-			name="hat",
-			desc=[[keeps the sun
-out of your eyes.]],
-			sp=20,
-		},
-	}
-end
 -->8
 --rooms
 function init_rooms()
@@ -432,6 +296,158 @@ clrs={
 	pink=14,
 	peach=15
 }
+-->8
+--inventory
+-->8
+--util
+function txt_w(txt)
+	return #txt*3+#txt-1
+end
+-->8
+--inventory
+local w=110
+local h=20
+local x=7
+
+function update_inv()
+	if btnp(➡️) and inv_idx<10 then 
+		inv_idx+=1
+	elseif btnp(⬅️) and inv_idx>1 then 
+		inv_idx-=1
+	elseif btnp(⬆️) and inv_idx>5 then 
+		inv_idx-=5
+	elseif btnp(⬇️) and inv_idx<6 then 
+		inv_idx+=5
+	elseif btnp(🅾️) then
+		active_item=inv[inv_idx]
+		inv_open=false
+		set_ptr_from_inv()
+	elseif btnp(❎) then
+		inv_open=false
+		set_ptr_from_inv()
+	end
+end
+
+function set_ptr_from_inv()
+	ptr.x=x+(inv_idx-1)*11+6
+	ptr.y=15
+end
+
+function draw_inv()
+	--bg
+	rectfill(
+		x,0,x+w,h,clrs.black)
+	--border
+	rect(x,0,x+w,h,clrs.white)
+	--boxes
+	for i=0,9 do
+		local bx=x+i*11
+		local by=9
+		rect(
+			bx,by,bx+11,by+11,
+			clrs.white)
+	end
+	--header
+	print(
+		"inventory",x+2,2,clrs.white)
+	--items
+	for i,item in ipairs(inv) do
+		local ix=x+(i-1)*11+2
+		spr(item.sp,ix,11)
+	end
+	--highlight
+	local hx=x+(inv_idx-1)*11
+	rect(hx,9,hx+11,20,
+		clrs.yellow)
+end
+
+function init_inv_btn()
+	inv_btn={
+		name="inventory button",
+		pos={x=119,y=0},
+		w=8,h=8,
+		draw=function(self)
+			if hovered_item==self then
+				rectfill(
+					self.pos.x,
+					self.pos.y,
+					self.pos.x+self.w,
+					self.pos.y+self.h,
+					clrs.white)
+			end
+			rect(
+				self.pos.x,
+				self.pos.y,
+				self.pos.x+self.w,
+				self.pos.y+self.h,
+				clrs.navy)
+			print("i",
+				self.pos.x+3,self.pos.y+2,
+				clrs.navy)
+		end,
+		activate=function(self) 
+			inv_open=true
+		end	
+	}
+end
+
+function draw_inv_btn()
+	inv_btn:draw()
+end
+
+function init_test_inv()
+	inv={
+		{
+			name="flower",
+			desc=[[it's a flower.
+smells nice.]],
+			sp=1,
+		},
+		{
+			name="tea",
+			desc=[[smells of bitter
+almonds.]],
+			sp=2,
+		},
+		{
+			name="screwdriver",
+			desc=[[equally useful for
+screwdriving and 
+screw-un-driving.]],
+			sp=3,
+		},
+		{
+			name="soy burger",
+			desc=[[no animals were
+harmed in the making
+of this game.]],
+			sp=4,
+		},
+		{
+			name="light bulb",
+			desc=[[in case you have
+a bright idea.]],
+			sp=17,
+		},
+		{
+			name="rabbit",
+			desc=[[can pull a magician
+out of its hat.]],
+			sp=18,
+		},
+		{
+			name="toy car",
+			desc=[[vroom, vroom.]],
+			sp=19,
+		},
+		{
+			name="hat",
+			desc=[[keeps the sun
+out of your eyes.]],
+			sp=20,
+		},
+	}
+end
 __gfx__
 00000000007000000777700060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000007a700007444477066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
