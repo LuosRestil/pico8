@@ -75,14 +75,6 @@ function _update()
 	end
 end
 
---todo
---[[
-*add item title to 
-	inventory window
-*add item description to 
-	inventory window
-]]
-
 function _draw()
 	cls(clrs.purple)
 	assert(rooms[room]~=nil)
@@ -298,16 +290,10 @@ clrs={
 }
 -->8
 --inventory
--->8
---util
-function txt_w(txt)
-	return #txt*3+#txt-1
-end
--->8
---inventory
 local w=110
-local h=20
+local h=19
 local x=7
+local by=8 --y of boxes
 
 function update_inv()
 	if btnp(➡️) and inv_idx<10 then 
@@ -325,12 +311,13 @@ function update_inv()
 	elseif btnp(❎) then
 		inv_open=false
 		set_ptr_from_inv()
+		active_item=nil
 	end
 end
 
 function set_ptr_from_inv()
 	ptr.x=x+(inv_idx-1)*11+6
-	ptr.y=15
+	ptr.y=by+6
 end
 
 function draw_inv()
@@ -342,7 +329,6 @@ function draw_inv()
 	--boxes
 	for i=0,9 do
 		local bx=x+i*11
-		local by=9
 		rect(
 			bx,by,bx+11,by+11,
 			clrs.white)
@@ -353,12 +339,37 @@ function draw_inv()
 	--items
 	for i,item in ipairs(inv) do
 		local ix=x+(i-1)*11+2
-		spr(item.sp,ix,11)
+		spr(item.sp,ix,by+2)
 	end
 	--highlight
 	local hx=x+(inv_idx-1)*11
-	rect(hx,9,hx+11,20,
-		clrs.yellow)
+	rect(hx,by,hx+11,by+11,
+		clrs.orange)
+		
+	--item detail window
+	local item=inv[inv_idx]
+	if item==nil then return end
+	local desc_lines=
+		#split(item.desc,"\n")
+	local idh= --item detail hght
+		(desc_lines+1)*5+
+		desc_lines+5
+	local idy=by+11
+	--bg
+	rectfill(
+		x,idy,x+w,idy+idh,clrs.black)
+	--border
+	rect(
+		x,idy,x+w,idy+idh,clrs.white)
+	--name
+	print(item.name,x+2,idy+2,
+		clrs.white)
+	--desc
+	print(item.desc,x+2,idy+10,
+		clrs.white)
+	--highlight again...
+	rect(hx,by,hx+11,by+11,
+		clrs.orange)
 end
 
 function init_inv_btn()
@@ -387,6 +398,7 @@ function init_inv_btn()
 		end,
 		activate=function(self) 
 			inv_open=true
+			hovered_item=nil
 		end	
 	}
 end
@@ -447,6 +459,11 @@ out of your eyes.]],
 			sp=20,
 		},
 	}
+end
+-->8
+--util
+function txt_w(txt)
+	return #txt*3+#txt-1
 end
 __gfx__
 00000000007000000777700060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
