@@ -21,7 +21,7 @@ function _init()
 	rooms=init_rooms()
 	for _,rm in pairs(rooms) do
 		for _,item in pairs(rm.items) do
-			local lines=split(item.txt,"\n")
+			local lines=split(item.desc,"\n")
 			for line in all(lines) do
 				assert(#line<26)
 			end
@@ -70,7 +70,7 @@ function _update()
 			if btnp(🅾️) then
 				hovered_item:activate()
 			elseif btnp(❎) then
-				msg=hovered_item.txt
+				msg=nil
 			end
 	end
 end
@@ -239,21 +239,23 @@ function init_room_start()
 				name="test item",
 				pos={x=20,y=20},
 				w=20,h=20,
-				txt=[[a profoundly 
+				desc=[[a profoundly 
 uninteresting
 test item.]],
 				draw=function(self) end,
-				activate=function(self) end	
+				activate=function(self) 
+					msg=self.desc
+				end	
 			},
 			test2={
 				name="boogie",
 				pos={x=81,y=4},
 				w=5,h=7,
-				txt=[[sometimes you just
+				desc=[[sometimes you just
 gotta boogie]],
 				draw=function(self) end,
 				activate=function(self)
-					dbg="boogie activated"
+					msg=self.desc
 				end
 			}
 		}
