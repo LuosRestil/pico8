@@ -2,8 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 --main
-local rooms={}
-local room=""
+local scenes={}
+local scene=""
 local hovered_item=nil
 local ptr={x=64,y=64}
 local ptr_spr={x=0,y=8,dim=3}
@@ -14,12 +14,18 @@ local inv_btn
 local inv_open=false
 local inv_idx=1
 local active_item=nil
+--navigation
+local nav
+local nav_r
+local nav_l
+local nav_b
+--debug stuff
 dbg="" --debug message
 draw_hitboxes=true
 
 function _init()
-	rooms=init_rooms()
-	for _,rm in pairs(rooms) do
+	scenes=init_scenes()
+	for _,rm in pairs(scenes) do
 		for _,item in pairs(rm.items) do
 			local lines=split(item.desc,"\n")
 			for line in all(lines) do
@@ -27,7 +33,8 @@ function _init()
 			end
 		end
 	end
-	room="start"
+	scene="start"
+	init_nav()
 	init_inv_btn()
 	init_test_inv()
 end
@@ -46,7 +53,8 @@ function _update()
 		btn(➡️) or
 		btn(⬅️) or
 		btn(⬆️) or
-		btn(⬇️)
+		btn(⬇️) or
+		btn(❎)
 	then
 		msg=nil
 	end
@@ -64,21 +72,23 @@ function _update()
 		ptr.y=mid(0,127,ptr.y+2)
 	end
 	
-	hover(rooms[room])
+	hover(scenes[scene])
 	
-	if hovered_item~=nil then
-			if btnp(🅾️) then
-				hovered_item:activate()
-			elseif btnp(❎) then
-				msg=nil
-			end
+	if 
+		btnp(🅾️) and 
+		hovered_item~=nil
+	then
+		hovered_item:activate()
+		active_item=nil
 	end
 end
 
 function _draw()
-	cls(clrs.purple)
-	assert(rooms[room]~=nil)
-	draw_room(rooms[room])
+	--scene
+	assert(scenes[scene]~=nil)
+	cls(scenes[scene].bg)
+	draw_items(scenes[scene])
+	--ui
 	draw_inv_btn()
 	if inv_open then
 		draw_inv()
@@ -92,10 +102,22 @@ function _draw()
 end
 
 function draw_ptr()
-	if active_item~=nil then
+	if not empty(nav) then
+		draw_nav_ptr()
+	elseif active_item~=nil then
 		draw_item_ptr()
 	else
 		draw_normal_ptr()
+	end
+end
+
+function draw_nav_ptr()
+	if nav.r then
+		spr(32,ptr.x-7,ptr.y-3)
+	elseif nav.l then
+		spr(33,ptr.x,ptr.y-3)
+	elseif nav.b then
+		spr(34,ptr.x-4,ptr.y-7)
 	end
 end
 
@@ -146,20 +168,29 @@ function draw_lg_ptr()
 		ptr.y-2)
 end
 
-function draw_room(room)
-	for k,v in pairs(room.items) do
-		v:draw()
-		if draw_hitboxes then
-			draw_hitbox(v)
-		end
-	end
-end
-
 --determine whether we're
---hovering over an item
-function hover(room)
+--hovering over something
+function hover(scene)
 	hovered_item=nil
-	for k,v in pairs(room.items) do
+	
+	--navigation
+	nav={}
+	if colliding(ptr,nav_r)
+	then
+		nav.r=true
+		hovered_item=nav
+	elseif colliding(ptr,nav_l)
+	then
+		nav.l=true
+		hovered_item=nav
+	elseif colliding(ptr,nav_b)
+	then
+		nav.b=true
+		hovered_item=nav
+	end
+	
+	for k,v in pairs(scene.items) 
+	do
 		if colliding(ptr,v) then
 			hovered_item=v
 		end
@@ -171,10 +202,10 @@ function hover(room)
 end
 
 function colliding(ptr,item)
-	return ptr.x>=item.pos.x and
-		ptr.x<=item.pos.x+item.w and
-		ptr.y>=item.pos.y and
-		ptr.y<=item.pos.y+item.h
+	return ptr.x>=item.x and
+		ptr.x<=item.x+item.w and
+		ptr.y>=item.y and
+		ptr.y<=item.y+item.h
 end
 
 function draw_msg()
@@ -223,21 +254,52 @@ function draw_hovered()
 		clrs.yellow)
 end
 
+function init_nav()
+	nav={}
+	nav_r={
+		x=120,y=8,w=8,h=128-16,
+		activate=function()
+			if scenes[scene].right then
+				scene=scenes[scene].right
+			end
+		end}
+	nav_l={
+		x=0,y=8,w=8,h=128-16,
+		activate=function()
+			if scenes[scene].left then
+				scene=scenes[scene].left
+			end
+		end}
+	nav_b={
+		x=8,y=120,w=128-16,h=8,
+		activate=function()
+			if scenes[scene].back then
+				scene=scenes[scene].back
+			end
+		end}
+end
 
 -->8
---rooms
-function init_rooms()
+--scenes
+function init_scenes()
 	return {
-		start=init_room_start()
+		start=init_scene_start(),
+		right=init_scene_right(),
+		left=init_scene_left(),
+		inner=init_scene_inner()
 	}
 end
 
-function init_room_start()
+function init_scene_start()
 	return {
+		bg=clrs.purple,
+		left="left",
+		right="right",
+		back=nil,
 		items={
 			test={
 				name="test item",
-				pos={x=20,y=20},
+				x=20,y=20,
 				w=20,h=20,
 				desc=[[a profoundly 
 uninteresting
@@ -249,7 +311,7 @@ test item.]],
 			},
 			test2={
 				name="boogie",
-				pos={x=81,y=4},
+				x=81,y=4,
 				w=5,h=7,
 				desc=[[sometimes you just
 gotta boogie]],
@@ -262,12 +324,44 @@ gotta boogie]],
 	}
 end
 
+function init_scene_right()
+	return {
+		bg=clrs.red,
+		left="start",
+		items={}
+	}
+end
+
+function init_scene_left()
+	return {
+		bg=clrs.yellow,
+		right="start",
+		items={}
+	}
+end
+
+function init_scene_inner()
+	return {
+		bg=clrs.brown,
+		back="start",
+		items={}
+	}
+end
+
+function draw_items(scene)
+	for k,v in pairs(scene.items) 
+	do
+		v:draw()
+		if draw_hitboxes then
+			draw_hitbox(v)
+		end
+	end
+end
+
 function draw_hitbox(item)
 	rect(
-		item.pos.x,
-		item.pos.y,
-		item.pos.x+item.w,
-		item.pos.y+item.h,
+		item.x,item.y,
+		item.x+item.w,item.y+item.h,
 		clrs.red)
 end
 -->8
@@ -377,25 +471,25 @@ end
 function init_inv_btn()
 	inv_btn={
 		name="inventory button",
-		pos={x=119,y=0},
+		x=119,y=0,
 		w=8,h=8,
 		draw=function(self)
 			if hovered_item==self then
 				rectfill(
-					self.pos.x,
-					self.pos.y,
-					self.pos.x+self.w,
-					self.pos.y+self.h,
+					self.x,
+					self.y,
+					self.x+self.w,
+					self.y+self.h,
 					clrs.white)
 			end
 			rect(
-				self.pos.x,
-				self.pos.y,
-				self.pos.x+self.w,
-				self.pos.y+self.h,
+				self.x,
+				self.y,
+				self.x+self.w,
+				self.y+self.h,
 				clrs.navy)
 			print("i",
-				self.pos.x+3,self.pos.y+2,
+				self.x+3,self.y+2,
 				clrs.navy)
 		end,
 		activate=function(self) 
@@ -467,6 +561,13 @@ end
 function txt_w(txt)
 	return #txt*3+#txt-1
 end
+
+function empty(table)
+	for _ in pairs(table) do
+		return false
+	end
+	return true
+end
 __gfx__
 00000000007000000777700060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000007a700007444477066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -484,14 +585,14 @@ __gfx__
 00000000000770007777777722228888cccccccc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000660006777777005500550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000660000677777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+67000000000000760666666600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+66770000000077660166666700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+66667700007766660016667000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+66666666666666660016667000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+66661100001166660001670000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+66110000000011660001670000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+61000000000000160000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 80000008b000000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 080000800b0000b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0080080000b00b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
