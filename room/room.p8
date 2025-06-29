@@ -25,14 +25,17 @@ draw_hitboxes=true
 
 function _init()
 	scenes=init_scenes()
+	--ensure appropriate txt len
 	for _,rm in pairs(scenes) do
-		for _,item in pairs(rm.items) do
-			local lines=split(item.desc,"\n")
+		for item in all(rm.items) do
+			local lines=
+				split(item.desc,"\n")
 			for line in all(lines) do
 				assert(#line<26)
 			end
 		end
 	end
+	
 	scene="start"
 	init_nav()
 	init_inv_btn()
@@ -85,8 +88,9 @@ end
 
 function _draw()
 	--scene
+	cls()
 	assert(scenes[scene]~=nil)
-	cls(scenes[scene].bg)
+	scenes[scene].draw_bg()
 	draw_items(scenes[scene])
 	--ui
 	draw_inv_btn()
@@ -175,24 +179,30 @@ function hover(scene)
 	
 	--navigation
 	nav={}
-	if colliding(ptr,nav_r)
+	if 
+		colliding(ptr,nav_r) and
+		scene_has_dir("right")
 	then
 		nav.r=true
-		hovered_item=nav
-	elseif colliding(ptr,nav_l)
+		hovered_item=nav_r
+	elseif 
+		colliding(ptr,nav_l) and
+		scene_has_dir("left")
 	then
 		nav.l=true
-		hovered_item=nav
-	elseif colliding(ptr,nav_b)
+		hovered_item=nav_l
+	elseif 
+		colliding(ptr,nav_b) and
+		scene_has_dir("back")
 	then
 		nav.b=true
-		hovered_item=nav
+		hovered_item=nav_b
 	end
 	
-	for k,v in pairs(scene.items) 
+	for item in all(scene.items) 
 	do
-		if colliding(ptr,v) then
-			hovered_item=v
+		if colliding(ptr,item) then
+			hovered_item=item
 		end
 	end
 	
@@ -253,32 +263,6 @@ function draw_hovered()
 		0,6,
 		clrs.yellow)
 end
-
-function init_nav()
-	nav={}
-	nav_r={
-		x=120,y=8,w=8,h=128-16,
-		activate=function()
-			if scenes[scene].right then
-				scene=scenes[scene].right
-			end
-		end}
-	nav_l={
-		x=0,y=8,w=8,h=128-16,
-		activate=function()
-			if scenes[scene].left then
-				scene=scenes[scene].left
-			end
-		end}
-	nav_b={
-		x=8,y=120,w=128-16,h=8,
-		activate=function()
-			if scenes[scene].back then
-				scene=scenes[scene].back
-			end
-		end}
-end
-
 -->8
 --scenes
 function init_scenes()
@@ -292,24 +276,24 @@ end
 
 function init_scene_start()
 	return {
-		bg=clrs.purple,
 		left="left",
 		right="right",
 		back=nil,
 		items={
-			test={
-				name="test item",
+			{
+				name="key",
 				x=20,y=20,
-				w=20,h=20,
-				desc=[[a profoundly 
-uninteresting
-test item.]],
-				draw=function(self) end,
-				activate=function(self) 
-					msg=self.desc
+				w=8,h=5,
+				sp=48,
+				desc=[[the key!!!]],
+				draw=function(self) 
+					spr(self.sp,self.x,self.y-1)
+				end,
+				activate=function(self)
+					pick_up(self)
 				end	
 			},
-			test2={
+			{
 				name="boogie",
 				x=81,y=4,
 				w=5,h=7,
@@ -317,10 +301,16 @@ test item.]],
 gotta boogie]],
 				draw=function(self) end,
 				activate=function(self)
-					msg=self.desc
+					go_scene("inner")
 				end
 			}
-		}
+		},
+		draw_bg=function() 
+			cls(clrs.purple)
+			local p="starting room"
+			local pw=txt_w(p)
+			print(p,64-pw/2,62,clrs.white)
+		end
 	}
 end
 
@@ -328,7 +318,13 @@ function init_scene_right()
 	return {
 		bg=clrs.red,
 		left="start",
-		items={}
+		items={},
+		draw_bg=function()
+			cls(clrs.red)
+			local p="right room"
+			local pw=txt_w(p)
+			print(p,64-pw/2,62,clrs.white)
+		end
 	}
 end
 
@@ -336,7 +332,13 @@ function init_scene_left()
 	return {
 		bg=clrs.yellow,
 		right="start",
-		items={}
+		items={},
+		draw_bg=function()
+			cls(clrs.green)
+			local p="left room"
+			local pw=txt_w(p)
+			print(p,64-pw/2,62,clrs.white)
+		end
 	}
 end
 
@@ -344,16 +346,59 @@ function init_scene_inner()
 	return {
 		bg=clrs.brown,
 		back="start",
-		items={}
+		items={},
+		draw_bg=function()
+			cls(clrs.brown)
+			local p="inner scene"
+			local pw=txt_w(p)
+			print(p,64-pw/2,62,clrs.white)
+		end
 	}
 end
 
+function init_nav()
+	nav={}
+	nav_r={
+		x=120,y=8,w=8,h=128-16,
+		activate=function()
+			navigate("right")
+		end}
+	nav_l={
+		x=0,y=8,w=8,h=128-16,
+		activate=function()
+			navigate("left")
+		end}
+	nav_b={
+		x=8,y=120,w=128-16,h=8,
+		activate=function()
+			navigate("back")
+		end}
+end
+
+function navigate(dir)
+	if scene_has_dir(dir) then
+		go_scene(scenes[scene][dir])
+	end
+end
+
+function scene_has_dir(dir)
+	return scenes[scene][dir]~=nil
+end
+
+function go_scene(name)
+	scene=name
+	ptr={x=64,y=64}
+	hovered_item=nil
+	active_item=nil
+	nav={}
+end
+
 function draw_items(scene)
-	for k,v in pairs(scene.items) 
+	for item in all(scene.items) 
 	do
-		v:draw()
+		item:draw()
 		if draw_hitboxes then
-			draw_hitbox(v)
+			draw_hitbox(item)
 		end
 	end
 end
@@ -364,26 +409,33 @@ function draw_hitbox(item)
 		item.x+item.w,item.y+item.h,
 		clrs.red)
 end
+
+function pick_up(item)
+	inv_add(item)
+	rm_from_scene(item.name)
+	msg="got "..item.name.."!"
+end
+
+function inv_add(item)
+	add(inv,{
+		name=item.name,
+		sp=item.sp,
+		desc=item.desc})
+	item.remove=true
+end
+
+function rm_from_scene(name)
+	local items=scenes[scene].items
+	for i=1,#items do
+		local item=items[i]
+		if item.name==name then
+			deli(items,i)
+			return
+		end
+	end
+end
 -->8
---clrs
-clrs={
-	black=0,
-	navy=1,
-	purple=2,
-	green=3,
-	brown=4,
-	charcoal=5,
-	grey=6,
-	white=7,
-	red=8,
-	orange=9,
-	yellow=10,
-	lime=11,
-	blue=12,
-	lavender=13,
-	pink=14,
-	peach=15
-}
+
 -->8
 --inventory
 local w=110
@@ -556,6 +608,7 @@ out of your eyes.]],
 		},
 	}
 end
+
 -->8
 --util
 function txt_w(txt)
@@ -568,6 +621,31 @@ function empty(table)
 	end
 	return true
 end
+-->8
+--clrs
+clrs={
+	black=0,
+	navy=1,
+	purple=2,
+	green=3,
+	brown=4,
+	charcoal=5,
+	grey=6,
+	white=7,
+	red=8,
+	orange=9,
+	yellow=10,
+	lime=11,
+	blue=12,
+	lavender=13,
+	pink=14,
+	peach=15
+}
+-->8
+--todo
+--[[
+*item interactions
+]]
 __gfx__
 00000000007000000777700060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000007a700007444477066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -593,14 +671,12 @@ __gfx__
 66110000000011660001670000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 61000000000000160000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-80000008b000000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-080000800b0000b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0080080000b00b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00088000000bb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00088000000bb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0080080000b00b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-080000800b0000b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-80000008b000000b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+99900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+90999999000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+90900909000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+99900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 3000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
