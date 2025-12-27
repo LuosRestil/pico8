@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 42
+version 43
 __lua__
 --main
 local scenes={}
@@ -44,7 +44,7 @@ function _init()
 	init_test_inv()
 end
 
-function _update()
+function _update60()
 	dbg=nil
 	
 	--different input handling
@@ -65,16 +65,16 @@ function _update()
 	end
 	
 	if btn(➡️) then 
-		ptr.x=mid(0,127,ptr.x+2)
+		ptr.x=mid(0,127,ptr.x+1)
 	end
 	if btn(⬅️) then 
-		ptr.x=mid(0,127,ptr.x-2)
+		ptr.x=mid(0,127,ptr.x-1)
 	end
 	if btn(⬆️) then 
-		ptr.y=mid(0,127,ptr.y-2)
+		ptr.y=mid(0,127,ptr.y-1)
 	end
 	if btn(⬇️) then 
-		ptr.y=mid(0,127,ptr.y+2)
+		ptr.y=mid(0,127,ptr.y+1)
 	end
 	
 	hover(scenes[scene])
@@ -703,6 +703,66 @@ end
 
 
 -->8
+--global funcs
+function toggle_hide(scn,item)
+	for name,scene in pairs(scenes) do
+		if name==scn.name then
+			for _,item in ipairs(scn.items) do
+				if item.name==item_name then
+					if item.hidden==nil then item.hidden=false end
+					item.hidden=not item.hidden
+				end
+			end
+		end
+	end
+end
+
+function pickup(item,rmv)
+	if rmv==nil then rmv=true end
+	add(inv, item)
+	if rmv then
+		rm_item(curr_scn.items,item.name)
+	end
+	--playsound pickup
+	msg="got "..item.name.."!"
+end
+
+function rm_item(scn,item)
+	for name,scene in pairs(scenes) do
+		if name==scn then
+			local items=scene.items
+			for i,itm in ipairs(items) do
+				if itm.name==item then
+					deli(items,i)
+				end
+			end
+		end
+	end
+end
+
+function set_state(scn,item,state)
+	for name,scene in pairs(scenes) do
+		if name==scn then
+			local items=scene.items
+			for i,itm in ipairs(items) do
+				if itm.name==item then
+					itm.state=state
+				end
+			end
+		end
+	end
+end
+
+function wrong_item(action)
+	--playsound no
+	msg="you can't"..action.."\nwith "..get_article(active_item.name)..active_item.name
+end
+
+function get_article(name)
+	if sub(name,#name,#name)=="s" or name=="sheet music" then return "" end
+	if lst_has({"a","e","i","o","u"},sub(name,1,1)) then return "an " end
+	return "a "
+end
 
 -->8
 --inventory
@@ -920,6 +980,13 @@ function rspr(s,x,y,a,w,h)
   end
  end
 end
+
+function lst_has(lst,el)
+	for _,x in ipairs(lst) do
+		if x==el then return true end
+	end
+	return false
+end
 -->8
 --clrs
 clrs={
@@ -941,23 +1008,334 @@ clrs={
 	peach=15
 }
 -->8
---todo
---[[
-*scale
-*bookshelf puzzle
-*hats puzzle-dummy heads with
-	hats,either you can take all
-	the hats and have to find the
-	right color order to open the
-	drawer of the table the heads
-	are on, or you have to find
-	the missing hat and put it
-	on the dummy to advance
-*drawing getting too expensive,
-	going to have to store
-	drawing instructions as
-	strings and write a parser
-]]
+--encoding
+function draw_encoded(s,x,y)
+	local basex = x or 0
+	local basey = y or 0
+	local w=tonum('0x'..sub(s,1,2))
+	local h=tonum('0x'..sub(s,3,4))
+	local rowpx=w
+	local x=basex
+	local y=basey
+	
+	for i=5,#s,4 do
+		local clr=-1
+		local clrchr=sub(s,i,i)		
+		if clrchr ~= 'x' then
+			clr=tonum('0x'..clrchr)
+		end
+		local len=tonum('0x'..sub(s,i+1,i+3))
+		while len>=rowpx do
+			if clr~=-1 then
+				line(x,y,x+rowpx-1,y,clr)
+			end
+			len=len-rowpx
+			rowpx=w
+			y=y+1
+			x=basex
+		end
+		if len>0 do
+			if clr~=-1 then
+				line(x,y,x+len-1,y,clr)
+			end
+			rowpx=rowpx-len
+			x=x+len
+		end
+	end
+end
+
+function init_bgs()
+	
+end
+-->8
+----scenes/items
+--
+----start
+--frnt_door_locked=true
+--pencil={
+--	name="pencil",
+--	wt=5,
+--	desc="2b or not 2b?\nthat is the pencil."
+--}
+--start={
+--	left="left",
+--	right="right",
+--	items={
+--		{
+--			name="lock",
+--			x=80,
+--			y=60,
+--			w=6,
+--			h=15,
+--			desc="looks like you'll\nneed a key.",
+--			act=function(self)
+--				if active_item == nil then
+--					set_msg(self.desc)
+--				elseif active_item.name=="key" then
+--					msg="you unlock the door!"	
+--					-- playsound unlock
+--					frnt_door_locked=false
+--					toggle_hide("start",self.name)
+--				else
+--					wrong_item("unlock the door")
+--				end
+--			end
+--		},
+--		{
+--			name="door",
+--			x=51,
+--			y=33,
+--			w=37,
+--			h=64,
+--			desc="a door leading\nto the outside.\nit's locked.",
+--			act=function(self)
+--				if frnt_door_locked then
+--					msg=self.desc
+--					--playsound msg
+--				end
+--			end
+--		},
+--		{
+--			name="grate",
+--			x=8,
+--			y=5,
+--			w=23,
+--			h=23,
+--			state="",
+--			act=function(self)
+--				go("grate"..self.state)
+--			end
+--		},
+--		{
+--			name="rug",
+--			x=39,
+--			y=101,
+--			w=62,
+--			h=9,
+--			act=function(self)
+--				msg="throwing aside the rug\nreveals a ladder\nleading to a cellar."
+--				toggle_hide("start", self.name)
+--				toggle_hide("start", "hole")
+--				--playsound rugpull
+--			end
+--		},
+--		{
+--			name="hole",
+--			x=47,
+--			y=103,
+--			w=44,
+--			h=5,
+--			act=function(self)
+--				go("basement")
+--			end,
+--			hidden=true
+--		},
+--		{
+--			name="clrbox",
+--			x=96,y=84,
+--			w=23,h=14,
+--			state="",
+--			function act(self)
+--				go("clrbox"..self.state)
+--			end
+--		},
+--		{
+--			name="ears",
+--			x=104,y=86,
+--			hidden=true
+--		},
+--		pencil,
+--		{
+--			x=9,y=57,w=22,h=14,
+--			act=function(self)
+--				go("radio")
+--			end
+--		}
+--	}
+--}
+--add(start.items, {
+--	name="drawer",
+--	x=9,y=73,w=25,h=4,
+--	act=function(self)
+--		pickup(pencil)
+--		rm_item("start",self.name)
+--		msg="you find a pencil\nin the drawer."
+--	end
+--})
+--
+--sheet_music_inv={
+--	name="sheet music",
+--	wt=33,
+--	desc='"moonlight sonata"'
+--}
+--targets={42,291,5} --bulb,rabbit,pencil
+--wt_slots={{},{},{}}
+--wt_box_open=false
+--function check_wts()
+--	if wt_box_open then return end
+--	if
+--		wt_slots[1].wt==targets[1] and
+--		wt_slots[2].wt==targets[2] and
+--		wt_slots[3].wt==targets[3]
+--	then
+--		toggle_hide("right","binoculars")
+--		set_state("right","wt_box_door","open")
+--		--playsound open
+--		weight_box_open=true
+--	end
+--end
+--
+--function drop_zone_activate(self)
+--	if wt_slots[self.idx].name~=nil then
+--		pickup(wt_slots[self.idx])
+--		wt_slots[self.idx]={}
+--	elseif active_item == nil then
+--		msg="a metal plate mounted\nonto a large box with\na door on the front."
+--		--playsound msg
+--	else
+--		wt_slots[self.idx]=active_item
+--		rm_inv(active_item.name)
+--		--playsound wtbox place item
+--	end
+--	check_wts()
+--end
+--
+--function drop_zone_draw(self)
+--	local itm=wt_slots[self.idx]
+--	--drawitem
+--	print(targets[self.idx],self.x+self.text_offset,self.y-8,clrs.yellow)
+--end
+--right={
+--	left="start",
+--	items={
+--		{
+--			name="window",
+--			x=9,y=14,w=35,h=36,
+--			act=function(self)
+--				if active_item==nil then
+--					msg="such a lovely day\noutside. what a shame\nyou're trapped in here."
+--					--playsound msg
+--				elseif active_item.name="binoculars" then
+--					msg='through the binoculars, you\nsee an airplane flying\na banner advertisement\n"101.1 krlc"`
+--					--playsound msg
+--				else
+--					wrong_item("")
+--					msg="i'm not sure what that\nwould accomplish."
+--				end
+--			end
+--		},
+--		{
+--			name="piano",
+--			x=9,y=76,w=45,h=8,
+--			act=function(self)
+--				go("piano")
+--			end
+--		},
+--		{
+--			name="piano bench",
+--			x=18,y=89,w=27,h=3,
+--			act=function(self)
+--				pickup(sheet_music_inv)
+--				msg='you found sheet music\nin the piano bench.\n"moonlight sonata"'
+--				rm_item("right",self.name)
+--			end
+--		},
+--		{
+--			name="music stand",
+--			x=17,y=66,w=30,h=9,
+--			act=function(self)
+--				if active_item==nil then
+--					msg="a place to put\nsheet music"
+--					--playsound msg
+--				elseif active_item.name=="sheet music" then
+--					toggle_hide("right",self.name)
+--					toggle_hide("right","stand_music")
+--					rm_inv("sheet music")					
+--					--playsound paper down
+--				else
+--					wrong_item("")
+--					msg="that doesn't go there"
+--				end
+--			end
+--		},
+--		{
+--			name="stand_music",
+--			x=17,7=66,w=30,h=9,
+--			act=function(self)
+--				pickup(sheet_music_inv)
+--				toggle_hide("right",self.name)
+--				toggle_hide("right","music stand")
+--			end,
+--			hidden=true
+--		}
+--		--dropzones
+--		{
+--			x=77,y=67,w=11,h=5,
+--			idx=1,text_offset=2,
+--			act=drop_zone_activate,
+--			draw=drop_zone_draw
+--		},
+--		{
+--			x=93,y=67,w=11,h=5,
+--			idx=2,text_offset=0,
+--			act=drop_zone_activate,
+--			draw=drop_zone_draw
+--		},
+--		{
+--			x=109,y=67,w=11,h=5,
+--			idx=3,text_offset=4,
+--			act=drop_zone_activate,
+--			draw=drop_zone_draw
+--		},
+--		{
+--			name="binoculars",
+--			x=96,y=83,w=4,h=7,
+--			wt=2023,
+--			desc="look through the small end",
+--			act=function(self)
+--				pickup(self)
+--			end,
+--			hidden=true
+--		},
+--		{
+--			name="wt_box_door",
+--			desc="the door doesn't budge",
+--			x=91,y=80,w=15,h=14,
+--			state="",
+--			draw=function(self)
+--				if state="" then
+--					-- sprite at pos
+--				else
+--					-- sprite at other 83,80
+--				end
+--			end
+--		},
+--		{
+--			name="piano lid",
+--			x=4,y=53,
+--			hidden=true
+--		},
+--		{
+--			name="screwdriver",
+--			x=26,y=52,w=8,h=8,
+--			wt=943,
+--			desc="equally useful for\nscrewdriving and\nscrew un-driving.",
+--			act=function(self)
+--				pickup(self)
+--				msg="the piano tuner must\nhave left a screwdriver\nin there. finders\nkeepers!"
+--			end,
+--			hidden=true
+--		},
+--		sheet_music_inv
+--	}
+--}
+--
+--function init_scenes()
+--	return {
+--		start=start,
+--		right=right
+--	}
+--end
 __gfx__
 00000000007000000777700060000000000000000aaaa00055555555555555559999000000000000000000000000000000000000000000000000000000000000
 0000000007a70000744447706600000000000000099990005dddddddddddddd59999000000000000000000000000000000000000000000000000000000000000
@@ -983,29 +1361,14 @@ __gfx__
 16110000000011610001670000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 11000000000000110000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000066600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000660660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-99900000600060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-90999999660660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-90900909066600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-99900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-__map__
-3000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-3000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000066600055000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000006606600ff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+999000006000600aa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+909999996606600aa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+909009090666000aa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+999000000000000aa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000ee000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
 040f0000073550735007350073502a300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300
 000900002d75034750347503474034730007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700007000070000700
