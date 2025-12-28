@@ -7,7 +7,8 @@ jspr={16,20,22,24,26,28}
 jgrid={}
 gridlock=false
 selected=nil
-fallspeed=4
+gravity=0.4
+swapspd=4
 
 function _init()
 	init_jgrid()
@@ -45,6 +46,7 @@ function _draw()
 end
 
 function draw_grid()
+	--jewels
 	for r=0,7 do
 		for c=0,7 do
 			local x=c*jsize
@@ -57,6 +59,7 @@ function draw_grid()
 				2,2)
 		end
 	end
+	--cursor
 	local currx=curr[1]*jsize
 	local curry=curr[2]*jsize
 	rect(
@@ -64,6 +67,7 @@ function draw_grid()
 		curry,
 		currx+jsize-1,
 		curry+jsize-1,9)
+	--selection highlight
 	if selected~=nil then
 		local selx=selected[1]*jsize
 		local sely=selected[2]*jsize
@@ -80,12 +84,7 @@ function init_jgrid()
 	for r=1,8 do
 		local row={}
 		for c=1,8 do
-			add(row,
-				{
-					sprite=rnd(jspr),
-					offset={0,0}
-				}
-			)
+			add(row,new_jewel())
 		end
 		add(grid,row)
 	end
@@ -97,15 +96,32 @@ function animate()
 	for r=1,8 do
 		for c=1,8 do
 			local j=jgrid[r][c]
-			if j.offset[1]~=0 then
-				j.offset[1]-=
-					sgn(j.offset[1])*fallspeed
+			
+			assert(not(j.swap and j.fall))
+
+			if j.swap or j.fall then
 				gridlock=true
 			end
-			if j.offset[2]~=0 then
-				j.offset[2]-=
-					sgn(j.offset[2])*fallspeed
-				gridlock=true
+			if j.swap then
+				if j.offset[1]~=0 then
+					j.offset[1]-=
+						sgn(j.offset[1])*swapspd
+				end
+				if j.offset[2]~=0 then
+					j.offset[2]-=
+						sgn(j.offset[2])*swapspd
+				end
+				j.swap=
+					(j.offset[1]~=0 or
+					j.offset[2]~=0)
+			elseif j.fall then
+				j.dy+=gravity
+				j.offset[2]+=j.dy
+				if j.offset[2]>0 then
+					j.offset[2]=0
+					j.fall=false
+					j.dy=-1
+				end
 			end
 		end
 	end
@@ -120,6 +136,8 @@ function swap(a,b)
 		if not has_matches() then
 			aj.sprite,bj.sprite=bj.sprite,aj.sprite
 		else
+			aj.swap=true
+			bj.swap=true
 			-- set anim offsets
 			if a[1]~=b[1] then
 				aj.offset[1]=jsize*sgn(b[1]-a[1])
@@ -141,7 +159,6 @@ end
 
 function match()
 	-- scan grid, set matches nil
-	local to_nil={}
 	for r=1,8 do
 		local last=nil
 		local ct=0
@@ -152,7 +169,7 @@ function match()
 			else
 				if ct>2 then
 					for i=c-1,c-ct,-1 do
-						add(to_nil,{r,i})
+						jgrid[r][i].destroy=true
 					end
 				end
 				last=j.sprite
@@ -161,7 +178,7 @@ function match()
 		end
 		if ct>2 then
 			for i=9-1,9-ct,-1 do
-				add(to_nil,{r,i})
+				jgrid[r][i].destroy=true
 			end
 		end
 	end
@@ -175,7 +192,7 @@ function match()
 			else
 				if ct>2 then
 					for i=r-1,r-ct,-1 do
-						add(to_nil,{i,c})
+						jgrid[i][c].destroy=true
 					end
 				end
 				last=j.sprite
@@ -184,33 +201,31 @@ function match()
 		end
 		if ct>2 then
 			for i=9-1,9-ct,-1 do
-				add(to_nil,{i,c})
+				jgrid[i][c].destroy=true
 			end
 		end
-	end
-	for tn in all(to_nil) do
-		jgrid[tn[1]][tn[2]]=nil
 	end
 	
 	--fill nils from above
 	for c=1,8 do
 		local offset=0
 		for r=8,1,-1 do
-			local cell=jgrid[r][c]
-			if cell==nil then
+			local j=jgrid[r][c]
+			if j.destroy then
 				offset+=1
 			elseif offset>0 then
-				local jewel=jgrid[r][c]
-				jewel.offset={0,-offset*jsize}
-				jgrid[r+offset][c]=jewel
+				j.offset={0,-offset*jsize}
+				jgrid[r+offset][c]=j
+				j.fall=true
 			end
 		end
 		--add new pieces
 		for r=1,offset do
-			jgrid[r][c]={
-				sprite=rnd(jspr),
-				offset={0,-offset*jsize}
-			}
+			local nj=new_jewel(
+				{0,-offset*jsize}
+			)
+			nj.fall=true
+			jgrid[r][c]=nj
 		end
 	end
 end
@@ -257,11 +272,22 @@ function has_matches()
 	
 	return false
 end
+
+function count_destroyed()
+	local ct=0
+	for r=1,8 do
+		for c=1,8 do
+			if jgrid[r][c].destroy then
+				ct+=1
+			end
+		end
+	end
+	return ct
+end
 -->8
 --todo
 --[[
 
-+ better dropping animation
 + particles
 + use floodfill for match
   checking so that we can see
@@ -277,6 +303,26 @@ end
 	  each. if false for all,
 	  reset board
 ]]
+-->8
+jmeta={
+ prnt=function(self)
+ 	printh("spr: "..self.sprite..", offset: {"..self.offset[1]..", "..self.offset[2]..", fall:  "..fall..", swap: "..swap..", dy: "..dy..", destroy: "..destroy)
+ end
+}
+
+function new_jewel(offset)
+	offset=offset or {0,0}
+	local nj={
+		sprite=rnd(jspr),
+		offset=offset,
+		fall=false,
+		swap=false,
+		dy=-1,
+		destroy=false
+	}
+	setmetatable(nj,{__index=jmeta})
+	return nj
+end
 __gfx__
 00000000000a700000ccc7008999999900777700000e70000aaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000aaa7000ccccc70288888890777677000dee7003bbbbbba000000000000000000000000000000000000000000000000000000000000000000000000
