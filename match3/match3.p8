@@ -116,13 +116,19 @@ function swap(a,b)
 		local aj=jgrid[a[2]+1][a[1]+1]
 		local bj=jgrid[b[2]+1][b[1]+1]
 		aj.sprite,bj.sprite=bj.sprite,aj.sprite
-		if a[1]~=b[1] then
-			aj.offset[1]=jsize*sgn(b[1]-a[1])
-			bj.offset[1]=jsize*sgn(a[1]-b[1])
-		end
-		if a[2]~=b[2] then
-			aj.offset[2]=jsize*sgn(b[2]-a[2])
-			bj.offset[2]=jsize*sgn(a[2]-b[2])
+
+		if not has_matches() then
+			aj.sprite,bj.sprite=bj.sprite,aj.sprite
+		else
+			-- set anim offsets
+			if a[1]~=b[1] then
+				aj.offset[1]=jsize*sgn(b[1]-a[1])
+				bj.offset[1]=jsize*sgn(a[1]-b[1])
+			end
+			if a[2]~=b[2] then
+				aj.offset[2]=jsize*sgn(b[2]-a[2])
+				bj.offset[2]=jsize*sgn(a[2]-b[2])
+			end
 		end
 	end
 	selected=nil
@@ -186,6 +192,7 @@ function match()
 		jgrid[tn[1]][tn[2]]=nil
 	end
 	
+	--fill nils from above
 	for c=1,8 do
 		local offset=0
 		for r=8,1,-1 do
@@ -198,6 +205,7 @@ function match()
 				jgrid[r+offset][c]=jewel
 			end
 		end
+		--add new pieces
 		for r=1,offset do
 			jgrid[r][c]={
 				sprite=rnd(jspr),
@@ -206,12 +214,53 @@ function match()
 		end
 	end
 end
+
+function has_matches()
+	for r=1,8 do
+		local last=nil
+		local ct=0
+		for c=1,8 do
+			local j=jgrid[r][c]
+			if j.sprite==last then
+				ct+=1
+			else
+				if ct>2 then
+					return true
+				end
+				last=j.sprite
+				ct=1
+			end
+		end
+		if ct>2 then
+			return true
+		end
+	end
+	for c=1,8 do
+		local last=nil
+		local ct=0
+		for r=1,8 do
+			local j=jgrid[r][c]
+			if j.sprite==last then
+				ct+=1
+			else
+				if ct>2 then
+					return true
+				end
+				last=j.sprite
+				ct=1
+			end
+		end
+		if ct>2 then
+			return true
+		end
+	end
+	
+	return false
+end
 -->8
 --todo
 --[[
 
-+ only allow swaps that match
-+ reset board on no moves
 + better dropping animation
 + particles
 + use floodfill for match
@@ -222,7 +271,11 @@ end
   than 3)
 + scoring
 + title screen
-
++ reset board on no moves
+	- make all possible swaps,
+	  calling has_matches after
+	  each. if false for all,
+	  reset board
 ]]
 __gfx__
 00000000000a700000ccc7008999999900777700000e70000aaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000
