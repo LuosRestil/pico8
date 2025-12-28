@@ -7,6 +7,7 @@ jspr={16,20,22,24,26,28}
 jgrid={}
 gridlock=false
 selected=nil
+fallspeed=4
 
 function _init()
 	init_jgrid()
@@ -31,16 +32,8 @@ function _update()
 		end
 	end
 	
-	--test drop
---	if btnp(❎) then
---		jgrid[1][1].offset={0,-jsize}
---		jgrid[2][1]=jgrid[1][1]
---		jgrid[1][1]={
---			sprite=rnd(jspr),
---			offset={0,-jsize}
---		}
---	end
 	animate()
+	
 	if not gridlock then
 		match()
 	end
@@ -105,11 +98,13 @@ function animate()
 		for c=1,8 do
 			local j=jgrid[r][c]
 			if j.offset[1]~=0 then
-				j.offset[1]-=sgn(j.offset[1])*4
+				j.offset[1]-=
+					sgn(j.offset[1])*fallspeed
 				gridlock=true
 			end
 			if j.offset[2]~=0 then
-				j.offset[2]-=sgn(j.offset[2])*4
+				j.offset[2]-=
+					sgn(j.offset[2])*fallspeed
 				gridlock=true
 			end
 		end
@@ -139,8 +134,96 @@ function are_neighbors(a,b)
 end
 
 function match()
-	-- scan grid, destroy matches
+	-- scan grid, set matches nil
+	local to_nil={}
+	for r=1,8 do
+		local last=nil
+		local ct=0
+		for c=1,8 do
+			local j=jgrid[r][c]
+			if j.sprite==last then
+				ct+=1
+			else
+				if ct>2 then
+					for i=c-1,c-ct,-1 do
+						add(to_nil,{r,i})
+					end
+				end
+				last=j.sprite
+				ct=1
+			end
+		end
+		if ct>2 then
+			for i=9-1,9-ct,-1 do
+				add(to_nil,{r,i})
+			end
+		end
+	end
+	for c=1,8 do
+		local last=nil
+		local ct=0
+		for r=1,8 do
+			local j=jgrid[r][c]
+			if j.sprite==last then
+				ct+=1
+			else
+				if ct>2 then
+					for i=r-1,r-ct,-1 do
+						add(to_nil,{i,c})
+					end
+				end
+				last=j.sprite
+				ct=1
+			end
+		end
+		if ct>2 then
+			for i=9-1,9-ct,-1 do
+				add(to_nil,{i,c})
+			end
+		end
+	end
+	for tn in all(to_nil) do
+		jgrid[tn[1]][tn[2]]=nil
+	end
+	
+	for c=1,8 do
+		local offset=0
+		for r=8,1,-1 do
+			local cell=jgrid[r][c]
+			if cell==nil then
+				offset+=1
+			elseif offset>0 then
+				local jewel=jgrid[r][c]
+				jewel.offset={0,-offset*jsize}
+				jgrid[r+offset][c]=jewel
+			end
+		end
+		for r=1,offset do
+			jgrid[r][c]={
+				sprite=rnd(jspr),
+				offset={0,-offset*jsize}
+			}
+		end
+	end
 end
+-->8
+--todo
+--[[
+
++ only allow swaps that match
++ reset board on no moves
++ better dropping animation
++ particles
++ use floodfill for match
+  checking so that we can see
+  how many pieces were in each
+  part of the match, (so we 
+  can give bonuses for more
+  than 3)
++ scoring
++ title screen
+
+]]
 __gfx__
 00000000000a700000ccc7008999999900777700000e70000aaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000aaa7000ccccc70288888890777677000dee7003bbbbbba000000000000000000000000000000000000000000000000000000000000000000000000
