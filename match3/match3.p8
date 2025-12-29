@@ -323,15 +323,11 @@ end
 --todo
 --[[
 
-+ particles
-+ use floodfill for match
-  checking so that we can see
-  how many pieces were in each
-  part of the match, (so we 
-  can give bonuses for more
-  than 3)
-+ keep track of chaining (how
-  many matches since last swap)
++ count pieces per match (so
+  we can give bonuses
+  for >3)
++ count chains (matches since
+  last swap)
 + scoring
 + title screen
 + reset board on no moves
@@ -339,6 +335,9 @@ end
 	  calling has_matches after
 	  each. if false for all,
 	  reset board
++ bonus stuff
+ - how do we make this
+   actually fun?
 ]]
 -->8
 jmeta={
