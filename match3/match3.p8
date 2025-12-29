@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 43
 __lua__
-jsize=16
+jsize=16 -- j="jewel"
 curr={0,0}
 jspr={16,20,22,24,26,28}
 jgrid={}
@@ -9,6 +9,7 @@ gridlock=false
 selected=nil
 gravity=0.4
 swapspd=4
+ps={} --particles
 
 function _init()
 	init_jgrid()
@@ -38,11 +39,14 @@ function _update()
 	if not gridlock then
 		match()
 	end
+	
+	update_particles()
 end
 
 function _draw()
 	cls()
 	draw_grid()
+	draw_particles()
 end
 
 function draw_grid()
@@ -170,6 +174,7 @@ function match()
 				if ct>2 then
 					for i=c-1,c-ct,-1 do
 						jgrid[r][i].destroy=true
+						particle_burst(r,i)
 					end
 				end
 				last=j.sprite
@@ -179,6 +184,7 @@ function match()
 		if ct>2 then
 			for i=9-1,9-ct,-1 do
 				jgrid[r][i].destroy=true
+				particle_burst(r,i)
 			end
 		end
 	end
@@ -193,6 +199,7 @@ function match()
 				if ct>2 then
 					for i=r-1,r-ct,-1 do
 						jgrid[i][c].destroy=true
+						particle_burst(i,c)
 					end
 				end
 				last=j.sprite
@@ -202,6 +209,7 @@ function match()
 		if ct>2 then
 			for i=9-1,9-ct,-1 do
 				jgrid[i][c].destroy=true
+				particle_burst(i,c)
 			end
 		end
 	end
@@ -284,6 +292,33 @@ function count_destroyed()
 	end
 	return ct
 end
+
+function particle_burst(r,c,n)
+	n=n or 20
+	for i=1,n do
+		local x=(c-1)*jsize
+		local y=(r-1)*jsize
+		local rx=rnd()*jsize+x
+		local ry=rnd()*jsize+y
+		add(ps,new_particle(rx,ry))
+	end
+end
+
+function update_particles()
+	for i=#ps,1,-1 do
+		local p=ps[i]
+		p:update()
+		if p.ttl==0 then
+			deli(ps,i)
+		end
+	end
+end
+
+function draw_particles()
+	for p in all(ps) do
+		p:draw()
+	end
+end
 -->8
 --todo
 --[[
@@ -295,6 +330,8 @@ end
   part of the match, (so we 
   can give bonuses for more
   than 3)
++ keep track of chaining (how
+  many matches since last swap)
 + scoring
 + title screen
 + reset board on no moves
@@ -306,9 +343,10 @@ end
 -->8
 jmeta={
  prnt=function(self)
- 	printh("spr: "..self.sprite..", offset: {"..self.offset[1]..", "..self.offset[2]..", fall:  "..fall..", swap: "..swap..", dy: "..dy..", destroy: "..destroy)
+ 	printh("spr: "..self.sprite..", offset: {"..self.offset[1]..", "..self.offset[2]..", fall:  "..self.fall..", swap: "..self.swap..", dy: "..self.dy..", destroy: "..self.destroy)
  end
 }
+jmeta.__index=jmeta
 
 function new_jewel(offset)
 	offset=offset or {0,0}
@@ -320,9 +358,40 @@ function new_jewel(offset)
 		dy=-1,
 		destroy=false
 	}
-	setmetatable(nj,{__index=jmeta})
+	setmetatable(nj,jmeta)
 	return nj
 end
+
+local pclrs={7,8,9,10,11,12,14}
+
+pmeta={
+	update=function(self)
+		self.x+=self.dx
+		self.y+=self.dy
+		self.ttl-=1
+	end,
+	draw=function(self)
+		circfill(self.x,self.y,
+			1,self.clr)
+	end
+}
+pmeta.__index=pmeta
+
+function new_particle(x,y)
+	local p={
+		x=x,
+		y=y,
+		dx=rnd()*5-2.5,
+		dy=rnd()*5-2.5,
+		ttl=flr(rnd()*10+10),
+		clr=rnd(pclrs),
+		destroy=false
+	}
+	setmetatable(p,pmeta)
+	return p
+end
+
+
 __gfx__
 00000000000a700000ccc7008999999900777700000e70000aaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000aaa7000ccccc70288888890777677000dee7003bbbbbba000000000000000000000000000000000000000000000000000000000000000000000000
