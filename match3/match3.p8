@@ -8,7 +8,8 @@ jgrid={}
 gridlock=false
 selected=nil
 gravity=0.4
-swapspd=4
+swapspd=jsize/4
+swapeps=0.01
 ps={} --particles
 
 function _init()
@@ -110,10 +111,16 @@ function animate()
 				if j.offset[1]~=0 then
 					j.offset[1]-=
 						sgn(j.offset[1])*swapspd
+					if abs(j.offset[1])<=swapeps then
+						j.offset[1]=0
+					end
 				end
 				if j.offset[2]~=0 then
 					j.offset[2]-=
 						sgn(j.offset[2])*swapspd
+					if abs(j.offset[2])<=swapeps then
+						j.offset[2]=0
+					end
 				end
 				j.swap=
 					(j.offset[1]~=0 or
