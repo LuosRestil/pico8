@@ -357,9 +357,8 @@ end
 --todo
 --[[
 
-+ count pieces per match (so
-  we can give bonuses
-  for >3)
++ count pieces in each match
+  for scoring
 + count chains (matches since
   last swap)
 + scoring

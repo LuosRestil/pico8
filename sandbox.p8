@@ -4,6 +4,22 @@ __lua__
 sprsize=30
 osx=0
 osy=0
+btxty=128
+ltxty=64
+
+function _init() end
+
+function _update()
+	osx+=1
+	osy+=1
+	osx%=sprsize
+	osy%=sprsize
+	
+	btxty-=1
+	btxty%=128
+	ltxty-=1
+	ltxty%=128
+end
 
 function _draw()
 	cls(1)
@@ -12,12 +28,35 @@ function _draw()
 			spr(1,i,j,4,4)
 		end
 	end
-	osx+=1
-	osy+=1
-	osx%=sprsize
-	osy%=sprsize
+	
+	local sint=sin(t())
+	
+	local txt="big text"
+	local w=txtw(txt,true)
+	local hlfw=w/2
+	local wig=sint*5
+	lgprint(txt,63-hlfw+wig,btxty+1,0)
+	lgprint(txt,64-hlfw+wig,btxty,10)
+	
+	txt="little text"
+	w=txtw(txt)
+	hlfw=w/2
+	wig=-sint*5
+	print(txt,63-hlfw+wig,ltxty+1,0)
+	print(txt,64-hlfw+wig,ltxty,10)
 end
 
+function lgprint(txt,x,y,clr)
+	print("\^w\^t"..txt,x,y,clr)
+end
+
+function txtw(txt,lg)
+	if(lg==nil)lg=false
+	local chrpx=#txt*3
+	local spcs=#txt-1
+	local w=chrpx+spcs
+	return lg and w*2 or w 
+end
 __gfx__
 00000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000022200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
