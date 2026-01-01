@@ -6,25 +6,115 @@ w,h=8,8
 jsize=14 -- j="jewel"
 padx=jsize/2
 pady=jsize
-curr={0,0}
 jspr=split("1,3,5,7,9,11")
 jgrid={}
-selected=nil
 gravity=0.4
 swapspd=jsize/4
 swapeps=0.01
-ps={} --particles
-txt={}
 
 bgosx,bgosy=0,0
 
+--game vars
+curr={0,0}
+selected=nil
 score,mvscore,mul,max_move=0,0,0,0
+ps={} --particles
+txt={}
+
+state="start"
 
 function _init()
-	init_jgrid()
+	
 end
 
 function _update()
+	update_bg()
+	if state=="start" then
+		update_start()
+	elseif state=="game" then
+		update_game()
+	elseif state=="end" then
+		update_end()
+	end
+	update_bg()
+end
+
+function _draw()
+	draw_bg()
+	if state=="start" then
+		draw_start()
+	elseif state=="game" then
+		draw_game()
+	elseif state=="end" then
+		draw_end()
+	end
+end
+
+
+function update_bg()
+	bgosx+=0.5
+	bgosy-=0.5
+	bgosx%=30
+	bgosy%=30
+end
+
+function draw_bg()
+	cls()
+	for i=-bgosx,128,30 do
+		for j=-bgosy,128,30 do
+			spr(64,i,j,4,4)
+		end
+	end
+end
+-->8
+--start
+function init_start()
+	
+end
+
+function update_start()
+	if btnp(🅾️) then
+		state="game"
+		init_game()
+	end
+end
+
+function draw_start()
+	print("jools",55,60,12)
+end
+-->8
+--game
+function init_game()
+	score=0
+	mvscore=0
+	mul=0
+	curr=0
+	curr={0,0}
+	selected=nil
+	ps={}
+	txt={}
+	local grid={}
+	for r=1,h do
+		add(grid,{})
+		for c=1,w do
+			local gen=true
+			--ensure no matches
+			while gen do
+				gen=false
+				local nj=new_jewel()
+				nj.offset={0,-128+rnd()*10}
+				nj.fall=true
+				grid[#grid][c]=nj
+				if has_matches(grid) then
+					gen=true
+				end
+			end
+		end
+	end
+	jgrid=grid
+end
+
+function update_game()
 	--move cursor
 	if btnp(➡️) then curr[1]+=1 end
 	if btnp(⬅️) then curr[1]-=1 end
@@ -56,8 +146,7 @@ function _update()
 	update_particles()
 end
 
-function _draw()
-	draw_bg()
+function draw_game()
 	draw_grid()
 	draw_particles()
 	print_score()
@@ -96,28 +185,6 @@ function draw_grid()
 			selx+jsize-1,
 			sely+jsize-1,14)
 	end
-end
-
-function init_jgrid()
-	local grid={}
-	for r=1,h do
-		add(grid,{})
-		for c=1,w do
-			local gen=true
-			--ensure no matches
-			while gen do
-				gen=false
-				local nj=new_jewel()
-				nj.offset={0,-128+rnd()*10}
-				nj.fall=true
-				grid[#grid][c]=nj
-				if has_matches(grid) then
-					gen=true
-				end
-			end
-		end
-	end
-	jgrid=grid
 end
 
 function animate()
@@ -454,19 +521,6 @@ function draw_particles()
 	end
 end
 
-function draw_bg()
-	cls()
-	for i=-bgosx,128,30 do
-		for j=-bgosy,128,30 do
-			spr(64,i,j,4,4)
-		end
-	end
-	bgosx+=0.5
-	bgosy-=0.5
-	bgosx%=30
-	bgosy%=30
-end
-
 function keyify(a,b)
 	return a..":"..b
 end
@@ -509,6 +563,8 @@ function has_moves()
 	return false
 	]]
 end
+-->8
+--end
 -->8
 --meta
 jmeta={
