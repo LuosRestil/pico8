@@ -7,7 +7,7 @@ jsize=14 -- j="jewel"
 padx=jsize/2
 pady=jsize
 curr={0,0}
-jspr={1,3,5,7,9,11}
+jspr=split("1,3,5,7,9,11")
 jgrid={}
 selected=nil
 gravity=0.4
@@ -16,13 +16,9 @@ swapeps=0.01
 ps={} --particles
 txt={}
 
-bgosx=0
-bgosy=0
+bgosx,bgosy=0,0
 
-score=0
-mvscore=0
-mul=0
-max_move=0
+score,mvscore,mul,max_move=0,0,0,0
 
 function _init()
 	init_jgrid()
@@ -37,20 +33,15 @@ function _update()
 	--clamp cursor to grid
 	curr[1]=mid(curr[1],0,w-1)
 	curr[2]=mid(curr[2],0,h-1)
-	
-	--select and swap
-	if btnp(🅾️) then
-		if selected==nil then
-			selected={curr[1],curr[2]}
-		else
-			swap(selected,curr)
-		end
+	if selected~= nil then
+		swap(selected,curr)
 	end
 	
-	--cancel select
-	if btnp(❎) then
+	--select and swap
+	if btn(🅾️) then
+		selected={curr[1],curr[2]}
+	else
 		selected=nil
-		mul=0
 	end
 	
 	animate()
@@ -113,6 +104,7 @@ function init_jgrid()
 		add(grid,{})
 		for c=1,w do
 			local gen=true
+			--ensure no matches
 			while gen do
 				gen=false
 				local nj=new_jewel()
@@ -504,6 +496,18 @@ function are_jmoving()
 		end
 	end
 	return false
+end
+
+function has_moves()
+	--[[
+	todo
+	for each jewel
+		for each possible direction
+			move jewel
+			if a match is formed
+				return true
+	return false
+	]]
 end
 -->8
 --meta
