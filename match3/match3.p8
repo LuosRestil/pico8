@@ -68,19 +68,69 @@ function draw_bg()
 end
 -->8
 --start
+local drips={}
+local frame=0
+local flash=true
+local flashrate=20
+
 function init_start()
 	
 end
 
 function update_start()
+	if rnd()<0.1 then
+		spawn_drip()
+	end
+	update_drips()
 	if btnp(🅾️) then
 		state="game"
 		init_game()
 	end
+	frame+=1
+	if frame%flashrate==0 then
+		flash=not flash
+	end
 end
 
 function draw_start()
-	print("jools",55,60,12)
+	draw_drips()
+	local yoff=sin(t()/2)*4
+	printctr(
+		"jools",51+yoff,2,true,-1)
+	printctr(
+		"jools",50+yoff,10,true)
+
+	if flash then
+		printctr(
+			"press 🅾️ to start",73,6)
+	end
+end
+
+function spawn_drip()
+	local nj=new_jewel()
+	nj.x,nj.y=rnd()*120,-jsize
+	add(drips,nj)
+end
+
+function update_drips()
+	for i=#drips,1,-1 do
+		local drip=drips[i]
+		drip.dy+=gravity
+		drip.y+=drip.dy
+		if drip.y>128 then
+			deli(drips,i)
+		end
+	end
+end
+
+function draw_drips()
+	for drip in all(drips) do
+		spr(
+				drip.sprite,
+				drip.x,
+				drip.y,
+				2,2)
+	end
 end
 -->8
 --game
@@ -567,13 +617,6 @@ end
 --end
 -->8
 --meta
-jmeta={
- prnt=function(self)
- 	printh("spr: "..self.sprite..", offset: {"..self.offset[1]..", "..self.offset[2]..", fall:  "..self.fall..", swap: "..self.swap..", dy: "..self.dy..", destroy: "..self.destroy)
- end
-}
-jmeta.__index=jmeta
-
 function new_jewel(offset)
 	offset=offset or {0,0}
 	local nj={
@@ -584,7 +627,6 @@ function new_jewel(offset)
 		dy=-1,
 		destroy=false
 	}
-	setmetatable(nj,jmeta)
 	return nj
 end
 
@@ -653,6 +695,23 @@ function new_txt(val,x,y,lg)
 	}
 	setmetatable(txt,txtmeta)
 	return txt
+end
+-->8
+--util
+
+function printctr(txt,y,clr,lg,offset)
+	offset=(offset~=nil) and offset or 0
+	local w=txtw(txt,lg)
+	local hflw=w/2
+	if(lg)txt="\^t\^w"..txt
+	print(txt,64+offset-hflw,y,clr)
+end
+
+function txtw(txt,lg)
+	local chrpx=#txt*3
+	local spcs=#txt-1
+	local w=chrpx+spcs
+	return lg==true and w*2 or w 
 end
 -->8
 --todo
