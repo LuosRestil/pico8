@@ -859,8 +859,7 @@ end
 --todo
 --[[
 
-+ persist max_move/score record
-+ message for new high mvscore
++ sfx/music
 + reset board on no moves
 	- make all possible swaps,
 	  calling has_matches after
