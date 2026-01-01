@@ -327,28 +327,36 @@ end
 function swap(a,b)
 	local aj=jgrid[a[2]+1][a[1]+1]
 	local bj=jgrid[b[2]+1][b[1]+1]
-	if aj.fall or bj.fall then
+	if 
+		(aj.fall or bj.fall) or
+		(aj.sprite==bj.sprite)
+	then
 		selected=nil
 		return
 	end
-	if are_neighbors(a,b) then
+	
+	aj.sprite,bj.sprite=bj.sprite,aj.sprite
+	local amatch=makes_match(a[2]+1,a[1]+1)
+	local bmatch=makes_match(b[2]+1,b[1]+1)
+	if 
+		not amatch and
+		not bmatch
+	then
 		aj.sprite,bj.sprite=bj.sprite,aj.sprite
-		if not has_matches() then
-			aj.sprite,bj.sprite=bj.sprite,aj.sprite
-		else
-			aj.swap=true
-			bj.swap=true
-			-- set anim offsets
-			if a[1]~=b[1] then
-				aj.offset[1]=jsize*sgn(b[1]-a[1])
-				bj.offset[1]=jsize*sgn(a[1]-b[1])
-			end
-			if a[2]~=b[2] then
-				aj.offset[2]=jsize*sgn(b[2]-a[2])
-				bj.offset[2]=jsize*sgn(a[2]-b[2])
-			end
+	else
+		aj.swap=true
+		bj.swap=true
+		-- set anim offsets
+		if a[1]~=b[1] then
+			aj.offset[1]=jsize*sgn(b[1]-a[1])
+			bj.offset[1]=jsize*sgn(a[1]-b[1])
+		end
+		if a[2]~=b[2] then
+			aj.offset[2]=jsize*sgn(b[2]-a[2])
+			bj.offset[2]=jsize*sgn(a[2]-b[2])
 		end
 	end
+
 	selected=nil
 end
 
@@ -666,6 +674,53 @@ function has_moves()
 				return true
 	return false
 	]]
+end
+
+function makes_match(r,c)
+	local j=jgrid[r][c]
+	local vct=1
+	local hct=1
+	--left
+	local currc=c-1
+	while 
+		currc>0 and
+		not j.fall and
+		jgrid[r][currc].sprite==j.sprite
+	do
+		vct+=1
+		currc-=1
+	end
+	--right
+	currc=c+1
+	while
+		currc<=w and
+		not j.fall and
+		jgrid[r][currc].sprite==j.sprite
+	do
+		vct+=1
+		currc+=1
+	end
+	--up
+	local currr=r-1
+	while 
+		currr>0 and
+		not j.fall and
+		jgrid[currr][c].sprite==j.sprite
+	do
+		hct+=1
+		currr-=1
+	end
+	--down
+	currr=r+1
+	while
+		currr<=h and
+		not j.fall and
+		jgrid[currr][c].sprite==j.sprite
+	do
+		hct+=1
+		currr+=1
+	end
+	return max(vct,hct)>=3
 end
 -->8
 --end
