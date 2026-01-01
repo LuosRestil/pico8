@@ -15,6 +15,9 @@ mvscore,
 mul,
 max_move=0,0,0,0
 
+move_record=0
+score_record=0
+
 frame=0
 flash=true
 flashrate=20
@@ -22,6 +25,9 @@ flashrate=20
 state=nil
 
 function _init()
+	cartdata("luosrestil_jools")
+	move_record=dget(0)
+	score_record=dget(1)
 	init_start()
 end
 
@@ -102,7 +108,7 @@ end
 
 function spawn_drip()
 	local nj=new_jewel()
-	nj.x,nj.y=rnd()*120,-jsize
+	nj.x,nj.y=rnd()*(128-jsize),-jsize
 	add(drips,nj)
 end
 
@@ -214,6 +220,14 @@ function update_game()
 		score+=mvtotal
 		mvscore,mul=0,0
 		if timer==0 then
+			if max_move>move_record then
+				move_record=max_move
+				dset(0,move_record)
+			end
+			if score>score_record then
+				score_record=score
+				dset(1,score_record)
+			end
 			init_end()
 		end
 	end 
@@ -678,6 +692,7 @@ function update_end()
 end
 
 function draw_end()
+	--box
 	if (bsize<tbsize) then
 		draw_game()
 	end
@@ -692,21 +707,40 @@ function draw_end()
 		bsize,bsize,
 		6,0)
 
+	-- game over
 	if bsize>=tbsize then
 		printctr(
 			"game over",36,2,true,-1)
 		printctr(
 			"game over",35,9,true)
-		printctr(
-			"max move: "..max_move,
-			56,2,false,-1)	
-		printctr(
-			"max move: "..max_move,55,9)
-		printctr(
-			"score: "..score,
-			66,2,false,-1)
-		printctr(
-			"score: "..score,65,9)
+		
+		-- max move
+		local mm_record=max_move==move_record
+		local mmtxt="max move: "..max_move
+		if mm_record then
+			mmtxt=mmtxt.." new record!"
+		end		
+		printctr(mmtxt,56,2,false,-1)	
+		printctr(mmtxt,55,9)
+		if mm_record then
+			printctr(
+				"             new record!",
+				55,10)
+		end
+			
+		-- score
+		local s_record=score==score_record
+		local stxt="score: "..score
+		if s_record then
+			stxt=stxt.." new record!"
+		end
+		printctr(stxt,66,2,false,-1)
+		printctr(stxt,65,9)
+		if s_record then
+			printctr(
+				"          new record!",
+				65,10)
+		end
 		if flash then
 			printctr(
 				"play again? 🅾️",80,6)
