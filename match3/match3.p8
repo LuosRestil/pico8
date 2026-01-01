@@ -1,6 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 43
 __lua__
+--main
 w,h=8,8
 jsize=14 -- j="jewel"
 padx=jsize/2
@@ -109,11 +110,20 @@ end
 function init_jgrid()
 	local grid={}
 	for r=1,h do
-		local row={}
+		add(grid,{})
 		for c=1,w do
-			add(row,new_jewel())
+			local gen=true
+			while gen do
+				gen=false
+				local nj=new_jewel()
+				nj.offset={0,-128+rnd()*10}
+				nj.fall=true
+				grid[#grid][c]=nj
+				if has_matches(grid) then
+					gen=true
+				end
+			end
 		end
-		add(grid,row)
 	end
 	jgrid=grid
 end
@@ -355,19 +365,29 @@ function floodfill(r,c,seen)
 	return grp
 end
 
-function has_matches()
-	for r=1,h do
+function has_matches(grid)
+	if grid==nil then
+		grid=jgrid
+	end
+	for r=1,#grid do
 		local last=nil
 		local ct=0
 		for c=1,w do
-			local j=jgrid[r][c]
-			if j.sprite==last then
+			local j=grid[r][c]
+			if 
+				j~=nil and
+				j.sprite==last
+			then
 				ct+=1
 			else
 				if ct>2 then
 					return true
 				end
-				last=j.sprite
+				last=nil
+				if j~=nil then
+					last=j.sprite
+				end
+				
 				ct=1
 			end
 		end
@@ -378,15 +398,20 @@ function has_matches()
 	for c=1,w do
 		local last=nil
 		local ct=0
-		for r=1,h do
-			local j=jgrid[r][c]
-			if j.sprite==last then
+		for r=1,#grid do
+			local j=grid[r][c]
+			if 
+				j~=nil and
+				j.sprite==last 
+			then
 				ct+=1
 			else
 				if ct>2 then
 					return true
 				end
-				last=j.sprite
+				if j~=nil then
+					last=j.sprite
+				end
 				ct=1
 			end
 		end
@@ -481,24 +506,7 @@ function are_jmoving()
 	return false
 end
 -->8
---todo
---[[
-
-+ timer
-+ message for new high mvscore
-+ handle score overflow
-+ title screen
-+ reset board on no moves
-	- make all possible swaps,
-	  calling has_matches after
-	  each. if false for all,
-	  reset board
-+ bonus stuff
- - how do we make this
-   actually fun?
-   
-]]
--->8
+--meta
 jmeta={
  prnt=function(self)
  	printh("spr: "..self.sprite..", offset: {"..self.offset[1]..", "..self.offset[2]..", fall:  "..self.fall..", swap: "..self.swap..", dy: "..self.dy..", destroy: "..self.destroy)
@@ -586,8 +594,25 @@ function new_txt(val,x,y,lg)
 	setmetatable(txt,txtmeta)
 	return txt
 end
+-->8
+--todo
+--[[
 
-
++ timer
++ message for new high mvscore
++ handle score overflow?
++ title screen
++ reset board on no moves
+	- make all possible swaps,
+	  calling has_matches after
+	  each. if false for all,
+	  reset board
++ start board with no moves
++ end screen w/ replay
++ bonus stuff?
+ - how do we make this fun?
+   
+]]
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000a70000000000009999990000000000777777000000000aaaaaaaa000000000009a00000000000000cc60000000000000000000000000000000
