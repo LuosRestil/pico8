@@ -716,30 +716,40 @@ function draw_end()
 		
 		-- max move
 		local mm_record=max_move==move_record
-		local mmtxt="max move: "..max_move
+		local mmtxt="max move: "..max_move		
+		local mmrcdtxt=nil
 		if mm_record then
+			local spc_ct=#mmtxt
+			local spcs=""
+			for i=1,spc_ct do
+				spcs=spcs.." "
+			end
+			mmrcdtxt=spcs.." new record!"
 			mmtxt=mmtxt.." new record!"
-		end		
+		end
 		printctr(mmtxt,56,2,false,-1)	
 		printctr(mmtxt,55,9)
-		if mm_record then
-			printctr(
-				"             new record!",
-				55,10)
+		if mmrcdtxt~=nil then
+			printctr(mmrcdtxt,55,10)
 		end
 			
 		-- score
 		local s_record=score==score_record
 		local stxt="score: "..score
+		local srcdtxt=nil
 		if s_record then
+			local spc_ct=#stxt
+			local spcs=""
+			for i=1,spc_ct do
+				spcs=spcs.." "
+			end
+			srcdtxt=spcs.." new record!"
 			stxt=stxt.." new record!"
 		end
 		printctr(stxt,66,2,false,-1)
 		printctr(stxt,65,9)
-		if s_record then
-			printctr(
-				"          new record!",
-				65,10)
+		if srcdtxt then
+			printctr(srcdtxt,65,10)
 		end
 		if flash then
 			printctr(
