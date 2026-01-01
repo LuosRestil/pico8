@@ -14,9 +14,14 @@ gravity=0.4
 swapspd=jsize/4
 swapeps=0.01
 ps={} --particles
+txt={}
 
 bgosx=0
 bgosy=0
+
+score=0
+mvscore=0
+mul=0
 
 function _init()
 	init_jgrid()
@@ -42,7 +47,10 @@ function _update()
 	end
 	
 	--cancel select
-	if (btnp(❎))selected=nil
+	if btnp(❎) then
+		selected=nil
+		mul=0
+	end
 	
 	animate()
 	
@@ -57,6 +65,7 @@ function _draw()
 	draw_bg()
 	draw_grid()
 	draw_particles()
+	print_score()
 end
 
 function draw_grid()
@@ -117,6 +126,7 @@ function animate()
 			if j.swap or j.fall then
 				gridlock=true
 			end
+			
 			if j.swap then
 				if j.offset[1]~=0 then
 					j.offset[1]-=
@@ -195,7 +205,7 @@ function match()
 				if ct>2 then
 					for i=c-1,c-ct,-1 do
 						jgrid[r][i].destroy=true
-						particle_burst(r,i)
+						pburst(r,i)
 					end
 				end
 				last=j.sprite
@@ -205,7 +215,7 @@ function match()
 		if ct>2 then
 			for i=w,w+1-ct,-1 do
 				jgrid[r][i].destroy=true
-				particle_burst(r,i)
+				pburst(r,i)
 			end
 		end
 	end
@@ -220,7 +230,7 @@ function match()
 				if ct>2 then
 					for i=r-1,r-ct,-1 do
 						jgrid[i][c].destroy=true
-						particle_burst(i,c)
+						pburst(i,c)
 					end
 				end
 				last=j.sprite
@@ -230,9 +240,41 @@ function match()
 		if ct>2 then
 			for i=h,h+1-ct,-1 do
 				jgrid[i][c].destroy=true
-				particle_burst(i,c)
+				pburst(i,c)
 			end
 		end
+	end
+	
+	-- scoring
+	local seen={}
+	local grps={}
+	for r=1,h do
+		for c=1,w do
+			local j=jgrid[r][c]
+			local k=keyify(r,c)
+			if seen[k] or not j.destroy then
+				goto continue
+			end
+			seen[k]=true
+			local grp=floodfill(r,c,seen)
+			add(grps,grp)
+			
+			::continue::
+		end
+	end
+	for grp in all(grps) do
+		mul+=1
+		local grpscr=#grp==3 and 1 or #grp
+		mvscore+=grpscr
+		local totx=0
+		local toty=0
+		for pos in all(grp) do
+			totx+=(pos[2]-1)*jsize
+			toty+=(pos[1]-1)*jsize
+		end
+		local avgx=totx/#grp+padx
+		local avgy=toty/#grp+pady
+		add(txt,new_txt("+"..grpscr,avgx,avgy))
 	end
 	
 	--fill nils from above
@@ -257,6 +299,40 @@ function match()
 			jgrid[r][c]=nj
 		end
 	end
+end
+
+function floodfill(r,c,seen)
+	local jspr=jgrid[r][c].sprite
+	local q={}
+	local grp={}
+	add(q,{r,c})
+	while #q>0 do
+		local curr=deli(q,1)
+		add(grp,curr)
+		local nbrs={
+			{curr[1],curr[2]-1},
+			{curr[1],curr[2]+1},
+			{curr[1]-1,curr[2]},
+			{curr[1]+1,curr[2]}
+		}
+		for nbr in all(nbrs) do
+			local k=keyify(nbr[1],nbr[2])
+			if 
+				seen[k]==nil and
+				is_on_grid(nbr) 
+			then
+				local j=jgrid[nbr[1]][nbr[2]]
+				if 
+					j.sprite==jspr and 
+					j.destroy
+				then
+					seen[k]=true
+					add(q,nbr)
+				end
+			end
+		end
+	end
+	return grp
 end
 
 function has_matches()
@@ -302,19 +378,7 @@ function has_matches()
 	return false
 end
 
---function count_destroyed()
---	local ct=0
---	for r=1,h do
---		for c=1,w do
---			if jgrid[r][c].destroy then
---				ct+=1
---			end
---		end
---	end
---	return ct
---end
-
-function particle_burst(r,c,n)
+function pburst(r,c,n)
 	n=n or 20
 	for i=1,n do
 		local x=(c-1)*jsize+padx
@@ -333,11 +397,23 @@ function update_particles()
 			deli(ps,i)
 		end
 	end
+	
+	for i=#txt,1,-1 do
+		local it=txt[i]
+		it:update()
+		if it.ttl==0 then
+			deli(txt,i)
+		end
+	end
 end
 
 function draw_particles()
 	for p in all(ps) do
 		p:draw()
+	end
+	
+	for it in all(txt) do
+		it:draw()
 	end
 end
 
@@ -353,14 +429,33 @@ function draw_bg()
 	bgosx%=30
 	bgosy%=30
 end
+
+function keyify(a,b)
+	return a..":"..b
+end
+
+function is_on_grid(pos)
+	return (
+		pos[1]>0 and
+		pos[2]>0 and
+		pos[1]<=w and
+		pos[2]<=h
+	)
+end
+
+function print_score()
+	print("score: 0",2,2,9)
+end
 -->8
 --todo
 --[[
-
++ if nothing is falling and
+  nothing is swapping and
+  curr score same as last
+  score, then the streak breaks
 + count pieces in each match
   for scoring
-+ count chains (matches since
-  last swap)
++ count chains
 + scoring
 	- 3->1pt
 	- more->n pts
@@ -423,6 +518,36 @@ function new_particle(x,y)
 	}
 	setmetatable(p,pmeta)
 	return p
+end
+
+txtmeta={
+	draw=function(self)
+		print(
+			self.val,
+			self.x-1,self.y+1,
+			0)
+		print(
+			self.val,
+			self.x,self.y,
+			self.clr)
+	end
+}
+txtmeta.__index=txtmeta
+setmetatable(txtmeta,{__index=pmeta})
+
+function new_txt(val,x,y)
+	local txt={
+		val=val,
+		x=x,
+		y=y,
+		dx=0,
+		dy=-0.5,
+		ttl=30,
+		clr=14,
+		destroy=false
+	}
+	setmetatable(txt,txtmeta)
+	return txt
 end
 
 
