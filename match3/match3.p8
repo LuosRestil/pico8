@@ -607,7 +607,6 @@ end
 	  calling has_matches after
 	  each. if false for all,
 	  reset board
-+ start board with no moves
 + end screen w/ replay
 + bonus stuff?
  - how do we make this fun?
