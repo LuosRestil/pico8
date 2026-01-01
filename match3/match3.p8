@@ -21,6 +21,7 @@ bgosy=0
 score=0
 mvscore=0
 mul=0
+max_move=0
 
 function _init()
 	init_jgrid()
@@ -52,7 +53,14 @@ function _update()
 	end
 	
 	animate()
-	match()
+	local did_match=match()
+	if 
+		not are_jmoving() and
+		not did_match
+	then
+		score+=mvscore*mul
+		mvscore,mul=0,0
+	end 
 	update_particles()
 end
 
@@ -266,6 +274,7 @@ function match()
 			::continue::
 		end
 	end
+	
 	for grp in all(grps) do
 		mul+=1
 		local grpscr=#grp==3 and 1 or #grp
@@ -279,6 +288,9 @@ function match()
 		local avgx=totx/#grp+padx
 		local avgy=toty/#grp+pady
 		add(txt,new_txt("+"..grpscr,avgx,avgy))
+		if mul>1 then
+			add(txt,new_txt("x"..mul,avgx,avgy,true))
+		end
 	end
 	
 	--fill nils from above
@@ -306,6 +318,7 @@ function match()
 			jgrid[r][c]=nj
 		end
 	end
+	return #grps>0
 end
 
 function floodfill(r,c,seen)
@@ -451,21 +464,29 @@ function is_on_grid(pos)
 end
 
 function print_score()
-	print("score: 0",2,2,9)
+	print("score: "..score,2,3,2)
+	print("move:"..mvscore,59,3,2)
+	print("score: "..score,3,2,9)
+	print("move:"..mvscore,60,2,9)
+end
+
+function are_jmoving()
+	for row in all(jgrid) do
+		for j in all(row) do
+			if j.fall or j.swap then
+				return true
+			end
+		end
+	end
+	return false
 end
 -->8
 --todo
 --[[
-+ if nothing is falling and
-  nothing is swapping and
-  curr score same as last
-  score, then the streak breaks
-+ count pieces in each match
-  for scoring
-+ count chains
-+ scoring
-	- 3->1pt
-	- more->n pts
+
++ timer
++ message for new high mvscore
++ handle score overflow
 + title screen
 + reset board on no moves
 	- make all possible swaps,
@@ -475,6 +496,7 @@ end
 + bonus stuff
  - how do we make this
    actually fun?
+   
 ]]
 -->8
 jmeta={
@@ -498,7 +520,7 @@ function new_jewel(offset)
 	return nj
 end
 
-local pclrs={7,8,9,10,11,12,14}
+pclrs={7,8,9,10,11,12,14}
 
 pmeta={
 	update=function(self)
@@ -529,6 +551,7 @@ end
 
 txtmeta={
 	draw=function(self)
+		self.clr=rnd(pclrs)
 		print(
 			self.val,
 			self.x-1,self.y+1,
@@ -542,13 +565,20 @@ txtmeta={
 txtmeta.__index=txtmeta
 setmetatable(txtmeta,{__index=pmeta})
 
-function new_txt(val,x,y)
+function new_txt(val,x,y,lg)
+	if lg==nil then
+		lg=false
+	end
+	if lg then
+		val="\^t\^w"..val
+	end
 	local txt={
 		val=val,
+		lg=lg,
 		x=x,
 		y=y,
 		dx=0,
-		dy=-0.5,
+		dy=lg and -1.5 or -0.5,
 		ttl=30,
 		clr=14,
 		destroy=false
