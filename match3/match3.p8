@@ -8,7 +8,6 @@ pady=jsize
 curr={0,0}
 jspr={1,3,5,7,9,11}
 jgrid={}
-gridlock=false
 selected=nil
 gravity=0.4
 swapspd=jsize/4
@@ -53,11 +52,7 @@ function _update()
 	end
 	
 	animate()
-	
-	if not gridlock then
-		match()
-	end
-	
+	match()
 	update_particles()
 end
 
@@ -116,16 +111,11 @@ function init_jgrid()
 end
 
 function animate()
-	gridlock=false
 	for r=1,h do
 		for c=1,w do
 			local j=jgrid[r][c]
 			
-			assert(not(j.swap and j.fall))
-
-			if j.swap or j.fall then
-				gridlock=true
-			end
+			assert(not(j.swap and j.fall), r..":"..c)
 			
 			if j.swap then
 				if j.offset[1]~=0 then
@@ -142,9 +132,10 @@ function animate()
 						j.offset[2]=0
 					end
 				end
-				j.swap=
-					(j.offset[1]~=0 or
+				local jswap=(
+					j.offset[1]~=0 or
 					j.offset[2]~=0)
+				j.swap=jswap
 			elseif j.fall then
 				j.dy+=gravity
 				j.offset[2]+=j.dy
@@ -159,15 +150,14 @@ function animate()
 end
 
 function swap(a,b)
-	if a.fall or b.fall then
+	local aj=jgrid[a[2]+1][a[1]+1]
+	local bj=jgrid[b[2]+1][b[1]+1]
+	if aj.fall or bj.fall then
 		selected=nil
 		return
 	end
 	if are_neighbors(a,b) then
-		local aj=jgrid[a[2]+1][a[1]+1]
-		local bj=jgrid[b[2]+1][b[1]+1]
 		aj.sprite,bj.sprite=bj.sprite,aj.sprite
-
 		if not has_matches() then
 			aj.sprite,bj.sprite=bj.sprite,aj.sprite
 		else
@@ -199,7 +189,11 @@ function match()
 		local ct=0
 		for c=1,w do
 			local j=jgrid[r][c]
-			if j.sprite==last then
+			if 
+				j.sprite==last and
+				not j.fall and
+				not j.swap
+			then
 				ct+=1
 			else
 				if ct>2 then
@@ -209,6 +203,9 @@ function match()
 					end
 				end
 				last=j.sprite
+				if j.fall or j.swap then
+					last=nil
+				end
 				ct=1
 			end
 		end
@@ -224,7 +221,11 @@ function match()
 		local ct=0
 		for r=1,h do
 			local j=jgrid[r][c]
-			if j.sprite==last then
+			if 
+				j.sprite==last and
+				not j.fall and
+				not j.swap
+			then
 				ct+=1
 			else
 				if ct>2 then
@@ -234,6 +235,9 @@ function match()
 					end
 				end
 				last=j.sprite
+				if j.fall or j.swap then
+					last=nil
+				end
 				ct=1
 			end
 		end
@@ -288,6 +292,9 @@ function match()
 				j.offset={0,-offset*jsize}
 				jgrid[r+offset][c]=j
 				j.fall=true
+				if j.swap then
+					j.swap=false
+				end
 			end
 		end
 		--add new pieces
