@@ -7,27 +7,29 @@ jsize=14 -- j="jewel"
 padx=jsize/2
 pady=jsize
 jspr=split("1,3,5,7,9,11")
-jgrid={}
 gravity=0.4
-swapspd=jsize/4
-swapeps=0.01
-
 bgosx,bgosy=0,0
 
---game vars
-curr={0,0}
-selected=nil
-score,mvscore,mul,max_move=0,0,0,0
-ps={} --particles
-txt={}
+score,
+mvscore,
+mul,
+max_move=0,0,0,0
 
-state="start"
+frame=0
+flash=true
+flashrate=20
+
+state=nil
 
 function _init()
-	
+	init_start()
 end
 
 function _update()
+	frame+=1
+	if frame%flashrate==0 then
+		flash=not flash
+	end
 	update_bg()
 	if state=="start" then
 		update_start()
@@ -69,12 +71,9 @@ end
 -->8
 --start
 local drips={}
-local frame=0
-local flash=true
-local flashrate=20
 
 function init_start()
-	
+	state="start"
 end
 
 function update_start()
@@ -83,12 +82,7 @@ function update_start()
 	end
 	update_drips()
 	if btnp(🅾️) then
-		state="game"
 		init_game()
-	end
-	frame+=1
-	if frame%flashrate==0 then
-		flash=not flash
 	end
 end
 
@@ -134,15 +128,33 @@ function draw_drips()
 end
 -->8
 --game
+jgrid={}
+swapspd=jsize/4
+swapeps=0.01
+ps={} --particles
+txt={}
+curr={0,0}
+selected=nil
+lastt=0
+tlimit=60
+timer=tlimit
+tick=false
+
 function init_game()
-	score=0
-	mvscore=0
-	mul=0
+	state="game"
+	score,mvscore,mul,max_move=0,0,0,0
 	curr=0
 	curr={0,0}
 	selected=nil
 	ps={}
 	txt={}
+	lastt=time()
+	timer=tlimit
+	tick=false
+	init_jgrid()
+end
+
+function init_jgrid()
 	local grid={}
 	for r=1,h do
 		add(grid,{})
@@ -190,16 +202,38 @@ function update_game()
 		not are_jmoving() and
 		not did_match
 	then
-		score+=mvscore*mul
+		if not tick then
+			--gems land at start
+			lastt=time()
+			tick=true
+		end
+		local mvtotal=mvscore*mul
+		if mvtotal>max_move then
+			max_move=mvtotal
+		end
+		score+=mvtotal
 		mvscore,mul=0,0
+		if timer==0 then
+			init_end()
+		end
 	end 
 	update_particles()
+	
+	if tick then
+		local currt=time()
+		timer-=currt-lastt
+		lastt=currt
+	end
+	if (timer<0) timer=0
 end
 
 function draw_game()
 	draw_grid()
 	draw_particles()
-	print_score()
+	if tick then
+		print_score()
+		print_timer()
+	end
 end
 
 function draw_grid()
@@ -585,10 +619,16 @@ function is_on_grid(pos)
 end
 
 function print_score()
-	print("score: "..score,2,3,2)
-	print("move:"..mvscore,59,3,2)
-	print("score: "..score,3,2,9)
-	print("move:"..mvscore,60,2,9)
+	print("score: "..score,2,4,2)
+--	print("move:"..mvscore,59,3,2)
+	print("score: "..score,3,3,9)
+--	print("move:"..mvscore,60,2,9)
+end
+
+function print_timer()
+	local ceilt=ceil(timer)
+	print("time: "..ceilt,79,4,2)
+	print("time: "..ceilt,80,3,9)
 end
 
 function are_jmoving()
@@ -615,6 +655,64 @@ function has_moves()
 end
 -->8
 --end
+bsize=0 --boxsize
+tbsize=100 --target box size
+
+function init_end()
+	bsize=0
+	state="end"
+end
+
+function update_end()
+	if bsize<tbsize then
+		bsize+=tbsize/15
+	end
+	update_particles()
+	
+	if
+		bsize>=tbsize and
+		btnp(🅾️)
+	then
+		init_game()
+	end
+end
+
+function draw_end()
+	if (bsize<tbsize) then
+		draw_game()
+	end
+	x=64-bsize/2
+	y=64-bsize/2
+	rrectfill(
+		x-1,y-1,
+		bsize+2,bsize+2,
+		6,7)
+	rrectfill(
+		x,y,
+		bsize,bsize,
+		6,0)
+
+	if bsize>=tbsize then
+		printctr(
+			"game over",36,2,true,-1)
+		printctr(
+			"game over",35,9,true)
+		printctr(
+			"max move: "..max_move,
+			56,2,false,-1)	
+		printctr(
+			"max move: "..max_move,55,9)
+		printctr(
+			"score: "..score,
+			66,2,false,-1)
+		printctr(
+			"score: "..score,65,9)
+		if flash then
+			printctr(
+				"play again? 🅾️",80,6)
+		end
+	end
+end
 -->8
 --meta
 function new_jewel(offset)
@@ -717,16 +815,14 @@ end
 --todo
 --[[
 
-+ timer
++ persist max_move/score record
 + message for new high mvscore
-+ handle score overflow?
-+ title screen
 + reset board on no moves
 	- make all possible swaps,
 	  calling has_matches after
 	  each. if false for all,
 	  reset board
-+ end screen w/ replay
+
 + bonus stuff?
  - how do we make this fun?
    
