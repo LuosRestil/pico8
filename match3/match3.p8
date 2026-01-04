@@ -96,9 +96,7 @@ function draw_start()
 	draw_drips()
 	local yoff=sin(t()/2)*4
 	printctr(
-		"jools",51+yoff,2,true,-1)
-	printctr(
-		"jools",50+yoff,10,true)
+		"jools",50+yoff,10,true,olp)
 
 	if flash then
 		printctr(
@@ -219,6 +217,13 @@ function update_game()
 		end
 		score+=mvtotal
 		mvscore,mul=0,0
+				
+		if not has_moves() then
+			init_jgrid()
+			score+=50
+			add(txt,new_txt("no moves +50",17,80,true))
+		end
+		
 		if timer==0 then
 			if max_move>move_record then
 				move_record=max_move
@@ -452,7 +457,7 @@ function match()
 	
 	for grp in all(grps) do
 		mul+=1
-		local grpscr=#grp==3 and 1 or #grp
+		local grpscr=(#grp-2)^2
 		mvscore+=grpscr
 		local totx=0
 		local toty=0
@@ -641,16 +646,12 @@ function is_on_grid(pos)
 end
 
 function print_score()
-	print("score: "..score,2,4,2)
---	print("move:"..mvscore,59,3,2)
-	print("score: "..score,3,3,9)
---	print("move:"..mvscore,60,2,9)
+	print(olp.."score: "..score,3,3,9)
 end
 
 function print_timer()
 	local ceilt=ceil(timer)
-	print("time: "..ceilt,79,4,2)
-	print("time: "..ceilt,80,3,9)
+	print(olp.."time: "..ceilt,80,3,9)
 end
 
 function are_jmoving()
@@ -665,15 +666,33 @@ function are_jmoving()
 end
 
 function has_moves()
-	--[[
-	todo
-	for each jewel
-		for each possible direction
-			move jewel
-			if a match is formed
+	for r=1,h do
+		for c=1,w-1 do
+			local aj=jgrid[r][c]
+			local bj=jgrid[r][c+1]
+			aj.sprite,bj.sprite=bj.sprite,aj.sprite
+			local amatch=makes_match(r,c)
+			local bmatch=makes_match(r,c+1)
+			aj.sprite,bj.sprite=bj.sprite,aj.sprite
+			if amatch or bmatch then
 				return true
+			end
+		end
+	end
+	for r=1,h-1 do
+		for c=1,w do
+			local aj=jgrid[r][c]
+			local bj=jgrid[r+1][c]
+			aj.sprite,bj.sprite=bj.sprite,aj.sprite
+			local amatch=makes_match(r,c)
+			local bmatch=makes_match(r+1,c)
+			aj.sprite,bj.sprite=bj.sprite,aj.sprite
+			if amatch or bmatch then
+				return true
+			end
+		end
+	end
 	return false
-	]]
 end
 
 function makes_match(r,c)
@@ -765,9 +784,7 @@ function draw_end()
 	-- game over
 	if bsize>=tbsize then
 		printctr(
-			"game over",36,2,true,-1)
-		printctr(
-			"game over",35,9,true)
+			"game over",35,9,true,olp)
 		
 		-- max move
 		local mm_record=max_move==move_record
@@ -781,9 +798,8 @@ function draw_end()
 			end
 			mmrcdtxt=spcs.." new record!"
 			mmtxt=mmtxt.." new record!"
-		end
-		printctr(mmtxt,56,2,false,-1)	
-		printctr(mmtxt,55,9)
+		end	
+		printctr(mmtxt,55,9,false,olp)
 		if mmrcdtxt~=nil then
 			printctr(mmrcdtxt,55,10)
 		end
@@ -801,8 +817,7 @@ function draw_end()
 			srcdtxt=spcs.." new record!"
 			stxt=stxt.." new record!"
 		end
-		printctr(stxt,66,2,false,-1)
-		printctr(stxt,65,9)
+		printctr(stxt,65,9,false,olp)
 		if srcdtxt then
 			printctr(srcdtxt,65,10)
 		end
@@ -860,11 +875,7 @@ txtmeta={
 	draw=function(self)
 		self.clr=rnd(pclrs)
 		print(
-			self.val,
-			self.x-1,self.y+1,
-			0)
-		print(
-			self.val,
+			olb..self.val,
 			self.x,self.y,
 			self.clr)
 	end
@@ -895,13 +906,17 @@ function new_txt(val,x,y,lg)
 end
 -->8
 --util
+olb="\^o020" --outline black
+olp="\^o220" --outline purple
 
-function printctr(txt,y,clr,lg,offset)
-	offset=(offset~=nil) and offset or 0
+function printctr(
+	txt,y,clr,lg,ol
+)
 	local w=txtw(txt,lg)
 	local hflw=w/2
 	if(lg)txt="\^t\^w"..txt
-	print(txt,64+offset-hflw,y,clr)
+	if(ol~=nil)txt=ol..txt
+	print(txt,64-hflw,y,clr)
 end
 
 function txtw(txt,lg)
@@ -915,11 +930,6 @@ end
 --[[
 
 + sfx/music
-+ reset board on no moves
-	- make all possible swaps,
-	  calling has_matches after
-	  each. if false for all,
-	  reset board
 
 + bonus stuff?
  - how do we make this fun?
