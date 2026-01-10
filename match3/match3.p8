@@ -148,6 +148,7 @@ tlimit=60
 timer=tlimit
 tick=false
 game_mus=0
+chain_len=0
 
 function init_game()
 	state="game"
@@ -224,7 +225,8 @@ function update_game()
 			max_move=mvtotal
 		end
 		score+=mvtotal
-		mvscore,mul=0,0
+		change_pitch(1,-chain_len)
+		mvscore,mul,chain_len=0,0,0
 				
 		if not has_moves() then
 			init_jgrid()
@@ -469,7 +471,6 @@ function match()
 	
 	for grp in all(grps) do
 		mul+=1
-		sfx(1)
 		local grpscr=(#grp-2)^2
 		mvscore+=grpscr
 		shakestr+=0.1
@@ -486,6 +487,12 @@ function match()
 			add(txt,new_txt("x"..mul,avgx,avgy,true))
 		end
 	end
+	if #grps>0 then
+		sfx(1)
+		chain_len+=1
+		change_pitch(1,1)
+	end
+
 	
 	--fill nils from above
 	for c=1,w do
@@ -952,16 +959,26 @@ function screenshake()
 		shakestr=0
 	end
 end
--->8
---todo
---[[
 
-+ gem sound scale with streak
+--pitch changing---------------
+--from "gumdrop" by pbd3
+--https://www.lexaloffle.com/bbs/?tid=42124
+function change_pitch(sf,change)
+ for i=0,31 do 
+  local addr=0x3200+68*sf+2*i
+  cur_byte=peek(addr)
+  cur_wave=64*flr(cur_byte/64)
+  cur_note=cur_byte-cur_wave
+  set_note(sf,i,cur_wave+max(min(cur_note+change,63),0))
+ end
+end
 
-+ bonus stuff?
- - how do we make this fun?
-   
-]]
+function set_note(sf,t,note)
+  local addr=0x3200+68*sf+2*t
+  poke(addr, note)
+end
+-------------------------------
+
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000a70000000000009999990000000000777777000000000aaaaaaaa000000000009a00000000000000cc60000000000000000000000000000000
