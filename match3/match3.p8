@@ -956,7 +956,6 @@ end
 --todo
 --[[
 
-+ balance music volume
 + gem sound scale with streak
 
 + bonus stuff?
