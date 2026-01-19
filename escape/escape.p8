@@ -177,7 +177,11 @@ function init_scenes()
 		books=init_books(),
 		kitchen=init_kitchen(),
 		basement=init_basement(),
-		piano_rm=init_piano_rm()
+		piano_rm=init_piano_rm(),
+		piano=init_piano(),
+--		grate=init_grate(),
+--		clr_box=init_clr_box(),
+--		bathroom=init_bathroom()
 	}
 end
 
@@ -258,8 +262,9 @@ function article(name)
 	return "a "
 end
 
-function get_item(name)
-	for i in all(scene.items) do
+function get_item(name,scn_name)
+	local scn=scn_name~=nil and scenes[scn_name] or scene
+	for i in all(scn.items) do
 		if(i.name==name)return i
 	end
 end
@@ -445,6 +450,13 @@ function draw_door(x,white)
 	pal()
 end
 
+sheet_music_item={
+	name="sheet music",
+	weight=33,
+	desc="\"moonlight sonata\"",
+	sp=54
+}
+
 bdoor_locked=true
 paper_down=false
 key_pushed=false
@@ -466,10 +478,48 @@ function init_books()
 end
 
 function init_book_items()
+local floorpaper={
+	x=21,y=99,w=30,h=3,
+	hide=true,
+	act=function(self)
+		self.hide=true
+		paper_down=false
+		if key_pushed then
+			pickup({
+				name="bathroom key",
+				weight=25,
+				desc="opens the bathroom door.",
+				sp=57
+			})
+		else
+			pickup(sheet_music_item)
+		end
+	end,
+	draw=function()
+		sspr(80,6,31,3,21,99)
+	end
+}
 local door={
 		x=11,y=30,w=37,h=64,
 		act=function()
-			msg="the door is locked."
+			if not bdoor_locked then
+				go("bathroom")
+				return
+			end
+			
+			if held==nil then
+				msg="the door is locked."
+			elseif held.name=="sheet music" then
+				inv_rm("sheet music")
+				paper_down=true
+				floorpaper.hide=false
+				printh("placing paper")
+				printh(floorpaper.hide)
+				--sfx paper down
+			else
+				wrong_item("")
+				msg="you rub the "..held.name.."\non the door.\n\"open sesame!\"\nit doesn't work."
+			end
 		end,
 		draw=function()
 			draw_door(11,true)
@@ -482,8 +532,10 @@ local door={
 			if held==nil then
 				if key_pushed then
 					msg="you peep through the\nkeyhole into what\nappears to be a\nbathroom."
+					--sfx msg
 				else
 					msg="you try to look\nthrough the keyhole\nbut something is\nblocking it from\nthe other side."
+					--sfx msg
 				end
 			elseif held.name=="hatpin" then
 				if paper_down then
@@ -492,20 +544,21 @@ local door={
 					inv_rm("hatpin")
 					--sfx pushkey
 				else
-					msg="if you do that now\nyou won't be able\nto reach what\nfalls out."
+					msg="if you do that now,\nyou won't be able\nto reach what\nfalls out."
 				end
-			elseif held.name=="bkey" then
+			elseif held.name=="bathroom key" then
 				msg="you unlock the door."
 				inv_rm("bkey")
 				scn_rm("lock")
 				--sfx unlock
 				bdoor_locked=false
 			else
-				--wrong item
+				wrong_item("")
+				msg="that doesn't fit in\nthe keyhole."
 			end
 		end
 	}
-	local items={door,lock}
+	local items={door,lock,floorpaper}
 	book_clrs={
 		o=0,
 		r=0,
@@ -759,13 +812,6 @@ function init_basement_items()
 	}
 end
 
-sheet_music_item={
-	name="sheet music",
-	weight=33,
-	desc="\"moonlight sonata\"",
-	sp=54
-}
-
 function init_piano_rm()
 	return {
 		l="start",
@@ -779,6 +825,7 @@ end
 targets={42,291,5}--bulb,rabbit,pencil
 slots={{},{},{}}
 weight_box_open=false
+piano_open=false
 
 function check_weights()
 	if(not weight_box_open)return
@@ -842,6 +889,33 @@ function init_piano_rm_items()
 			go("piano")
 		end
 	}
+	local lid={
+		name="lid",
+		draw=function()
+			line(5,61,59,61,4)
+			line(6,61,58,61,9)
+			rf(4,53,60,60,4)
+			rf(5,54,59,59,5)
+		end,
+		hide=true
+	}
+	local screwdriver={
+		name="screwdriver",
+		x=26,y=52,w=8,h=8,
+		draw=function()
+			spr(56,26,52)
+		end,
+		act=function()
+			pickup({
+				name="screwdriver",
+				desc="equally useful for\nscrewdriving and\nscrew un-driving.",
+				weight=943,
+				sp=56
+			})
+			msg="the piano tuner must\nhave left a screwdriver\nin there. finders\nkeepers!"
+		end,
+		hide=true
+	}
 	local bench={
 		name="bench",
 		x=18,y=89,w=27,h=3,
@@ -890,6 +964,7 @@ function init_piano_rm_items()
 				name="binoculars",
 				weight=2023,
 				desc="look through the small end",
+				sp=55
 			})
 			scn_rm("binos")
 		end,
@@ -931,11 +1006,75 @@ function init_piano_rm_items()
 		window,piano,bench,stand,
 		stand_music,binos,door,
 		bulbslot,rabbitslot,
-		pencilslot
+		pencilslot,lid,screwdriver
 	}
 end
 
+piano_hist={0,0,0,0}
+piano_ans={7,10,3,7}
+function check_piano()
+	if(piano_open)return
+	for i=1,4 do
+		if(piano_hist[i]~=piano_ans[i])return
+	end
+	msg="the piano top pops open!"
+	get_item("lid","piano_rm").hide=false
+	get_item("screwdriver","piano_rm").hide=false
+	piano_open=true	
+end
 
+function init_piano()
+	local p={
+		b="piano_rm",
+		draw=function()
+			rf(0,0,127,127,4)
+			line(0,35,0,104,0)
+			for i=0,6 do
+				local x=i*18+1
+				rect(x,35,x+18,104,0)
+				rf(x+1,36,x+17,103,7)
+				line(x+1,99,x+17,99,5)
+				rf(x+1,100,x+17,103,6)
+			end
+			local bxs={15,33,69,87,105}
+			for bx in all(bxs) do
+				rf(bx,36,bx+8,63,0)
+			end
+		end,
+		items=init_piano_items()
+	}
+	for item in all(p.items) do
+		item.act=function(self)
+			sfx(self.fx,3)
+			deli(piano_hist,1)
+			add(piano_hist,self.idx)
+			check_piano()
+		end
+	end
+	return p
+end
+
+function init_piano_items()
+	local keys={
+		{x=2,y=64,w=17,h=35},
+		{x=15,y=36,w=9,h=28},
+		{x=20,y=64,w=17,h=35},
+		{x=33,y=36,w=9,h=28},
+		{x=38,y=64,w=17,h=35},
+		{x=56,y=64,w=17,h=35},
+		{x=69,y=36,w=9,h=28},
+		{x=74,y=64,w=17,h=35},
+		{x=87,y=36,w=9,h=28},
+		{x=92,y=64,w=17,h=35},
+		{x=105,y=36,w=9,h=28},
+		{x=110,y=64,w=17,h=35},
+	}
+	for i=1,#keys do
+		keys[i].fx=30+i-1
+		keys[i].idx=i
+	end
+	return keys
+end
 -->8
 --inv
 inv={}
@@ -1080,6 +1219,14 @@ function draw_encoded(s,x,y)
 		end
 	end
 end
+-->8
+--todo
+--[[
+
+* two-tone pointer
+* use set_msg instead of msg=
+
+]]
 __gfx__
 0000000007000700170000000000007101111111fffffffffffffffffffffffffffffffffff00000077777777777777577777777777777000000000000000000
 00000000707007001677000000007761016666674444444444444444444444444444444444400000777555555555577577755555555557700000000000000000
@@ -1105,11 +1252,11 @@ eaaaae33000033343343330333665555555555555555556644444444444444444444444050000005
 eaaaae00000000000000000000666666666666666666666644444444444444444444444005000050000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000044444444444444444444444000500500000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00050000004444009999999900000000000000000006600007777770000000000000000000000000000000000000000000000000000000000000000000000000
-000f0000005005009777777700000000000006600006600077555577011011000000000000000000000000000000000000000000000000000000000000000000
-000a0000000550009999999700eee700000006600007700075777757055155000000000000000000000000000000000000000000000000000000000000000000
-000a000000055000944494970eeeee70000060000077770077777777055155000000000000000000000000000000000000000000000000000000000000000000
-000a000000500500999999970eeeee70000600000777777077555577055155000000000000000000000000000000000000000000000000000000000000000000
-000a00000500005094494497eeeeeeee0060000007777a7075777757055055000000000000000000000000000000000000000000000000000000000000000000
-00060000050000509999999700000000060000000777a77077777777055055000000000000000000000000000000000000000000000000000000000000000000
-000e0000005005009999999000000000000000000077770077777777066066000000000000000000000000000000000000000000000000000000000000000000
+00050000004444009999999900000000000000000006600007777770000000006000000000000000000000000000000000000000000000000000000000000000
+000f0000005005009777777700000000000006600006600077555577011011006600000066600000aaa000000000000000000000000000000000000000000000
+000a0000000550009999999700eee700000006600007700075777757055155000660000065666666a9aaaaaa0000000000000000000000000000000000000000
+000a000000055000944494970eeeee70000060000077770077777777055155000069a00060655656a0a99a9a0000000000000000000000000000000000000000
+000a000000500500999999970eeeee700006000007777770775555770551550000999a0066600505aaa009090000000000000000000000000000000000000000
+000a00000500005094494497eeeeeeee0060000007777a707577775705505500000499a055500000999000000000000000000000000000000000000000000000
+00060000050000509999999700000000060000000777a77077777777055055000000499900000000000000000000000000000000000000000000000000000000
+000e0000005005009999999000000000000000000077770077777777066066000000049000000000000000000000000000000000000000000000000000000000
