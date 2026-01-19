@@ -11,6 +11,7 @@ inv_open=false
 dbg=""
 draw_hb=false
 rf=rectfill
+rrf=rrectfill
 
 function _init()
 	scenes=init_scenes()
@@ -181,7 +182,10 @@ function init_scenes()
 		piano=init_piano(),
 		grate=init_grate(),
 --		clr_box=init_clr_box(),
-		bathroom=init_bathroom()
+		bathroom=init_bathroom(),
+		radio=init_radio(),
+--		title=init_title(),
+--		outside=init_outside()
 	}
 end
 
@@ -1233,6 +1237,135 @@ function init_grate_items()
 
 	return items
 end
+
+
+alpha=" abcdefghijklmnopqrstuvwxyz"
+radio_ans={12,19,13,4}
+btn_vals={2,3,4,5}
+fun_words={
+	{20,9,10,21},
+	{7,22,4,12},
+	{5,10,4,12},
+	{4,22,15,21}
+}
+radio_on=false
+radio_tuned=false
+function init_radio()
+	return {
+		draw=function()
+			rf(0,0,127,111,2)
+			line(0,112,127,112,5)
+			rf(0,113,127,127,4)
+			rrf(5,31,118,87,1,6)
+			
+			rrf(10,38,108,13,1,5)
+			local long=true
+			for x=17,115,8 do
+				line(x,38,x,38+(long and 4 or 2),7)
+				long=not long
+			end
+			
+			rf(26,42,27,50,8)
+			
+			for x=10,73,21 do
+				rrf(x,55,18,18,1,0)
+			end
+			
+			circfill(104,63,8,3)
+			circ(104,63,3,7)
+			line(104,60,104,62,7)
+			pset(103,60,3)
+			pset(105,60,3)
+			
+			rrect(10,79,108,35,1,5)
+			for y=83,107,6 do
+				rf(14,y,113,y+2,5)
+				pset(14,y,6)
+				pset(113,y,6)
+				pset(14,y+2,6)
+				pset(113,y+2,6)
+			end
+			
+			line(4,112,4,116,5)
+			pset(5,117,5)
+			line(6,118,121,118,5)
+			
+			rf(92,0,94,30,6)
+			pset(90,31,5)
+			pset(96,31,5)
+			line(91,32,95,32,5)
+		end,
+		items=init_radio_items()
+	}
+end
+
+function init_radio_items()
+	local pwr_btn={
+		x=97,y=56,w=15,h=15,
+		act=function()
+			--sfx click
+			radio_on=not radio_on
+			if radio_on then
+				if radio_tuned then
+					-- piano music
+				else
+					-- static
+				end
+			else
+				--music off
+			end
+		end
+	}
+	local items={}
+	local idx=1
+	for x=10,73,21 do
+		local button={
+			x=x,y=55,w=18,h=18,
+			idx=idx,
+			act=function(self)
+				btn_vals[self.idx]+=1
+				if(btn_vals[self.idx]>#alpha)btn_vals[self.idx]=1			
+				
+				local win=true
+				local fwt={}
+				for _=1,#fun_words do
+					add(fwt,true)
+				end
+				for i=1,#radio_ans do
+					if btn_vals[i]~=radio_ans[i] then
+						win=false
+					end
+					for j=1,#fun_words do
+						if(btn_vals[i]~=fun_words[j][i])fwt[j]=false
+					end
+				end
+				
+				for fw in all(fwt) do
+					if fw then
+						msg="naughty..."
+						--sfx no
+					end 
+				end
+				
+				if radio_on then
+					if win then
+						-- piano music
+					elseif radio_tuned then
+						-- static
+					end
+				end
+				
+				radio_tuned=win
+			end,
+			draw=function(self)
+				print("\^t\^w"..alpha[btn_vals[self.idx]],self.x+6,59,11)
+			end
+		}
+		add(items,button)
+		idx+=1
+	end
+	return items
+end
 -->8
 --inv
 inv={}
@@ -1437,6 +1570,10 @@ end
 		- takes sfx as arg, w/ default
 * image offsets?
 * bathroom performance
+
+* mus 0 start/end
+* mus 24 piano
+* mus 56 static
 
 ]]
 __gfx__
