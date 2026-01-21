@@ -223,14 +223,11 @@ function go(scn_name)
 	nav={}
 end
 
-function pickup(item,rm)
-	rm=rm or true
+function pickup(item,pmsg)
+	pmsg=pmsg~=nil and pmsg or "got "..item.name.."!"
 	add(inv,item)
-	if rm then
-		scn_rm(item.name)
-	end
-	--sfx pickup
-	msg="got "..item.name.."!"
+	--todo pass pickup sfx
+	set_msg(pmsg,0)
 end
 
 function scn_rm(item_name)
@@ -251,11 +248,8 @@ function items_rm(items,name)
 end
 
 function wrong_item(action)
-	--sfx no
---	assert(action!=nil)
---	assert(held!=nil)
---	assert(held.name!=nil)
-	msg="you can't "..action.."\nwith "..article(held.name)..held.name
+	--todo pass sfx no
+	set_msg("you can't "..action.."\nwith "..article(held.name)..held.name,0)
 end
 
 function article(name)
@@ -271,6 +265,13 @@ function get_item(name,scn_name)
 	for i in all(scn.items) do
 		if(i.name==name)return i
 	end
+end
+
+function set_msg(new_msg,fx)
+	--todo msg fx as default
+	fx=fx~=nil and fx or 0
+	msg=new_msg
+	sfx(fx)
 end
 -->8
 --scenes
@@ -338,8 +339,7 @@ function init_start_items()
 		x=51,y=33,w=37,h=64,
 		act=function()
 			if door_locked then
-				msg="a door leading\nto the outside.\nit's locked."
-				--sfx msg
+				set_msg("a door leading\nto the outside.\nit's locked.")
 			else
 				go("outside")
 				-- switch music
@@ -354,11 +354,10 @@ function init_start_items()
 		x=80,y=60,w=6,h=15,
 		act=function()
 			if held==nil then
-				msg="looks like you'll\nneed a key."
-				--todo sfx
+				set_msg("looks like you'll\nneed a key.")
 			elseif held.name=="key" then
-				msg="you unlock the door!"
-				--sfx unlock
+				--todo pass sfx unlock
+				set_msg("you unlock the door!",0)
 				door_locked=false
 				scn_rm("lock")
 				inv_rm("key")
@@ -386,10 +385,10 @@ function init_start_items()
 		name="rug",
 		x=39,y=101,w=62,h=9,
 		act=function()
-		 msg="throwing aside the rug\nreveals a ladder\nleading to a cellar."
+			--todo pass rug sfx
+			set_msg("throwing aside the rug\nreveals a ladder\nleading to a cellar.",0)
 			hole.hide=false
 			scn_rm("rug")
-			--todo sfx
 		end,
 		draw=function()
 			ovalfill(39,102,100,109,5)
@@ -433,14 +432,15 @@ function init_start_items()
 		name="drawer",
 		x=9,y=73,w=25,h=4,
 		act=function()
-			pickup({
-				name="pencil",
-				weight=5,
-				desc="2b or not 2b?\nthat is the pencil.",
-				sp=48
-			})
+			pickup(
+				{
+					name="pencil",
+					weight=5,
+					desc="2b or not 2b?\nthat is the pencil.",
+					sp=48
+				},
+				"you find a pencil\nin the drawer.")
 			scn_rm("drawer")
-			msg="you find a pencil\nin the drawer."
 		end
 	}
 	local clrbox={
@@ -564,15 +564,15 @@ local door={
 			end
 			
 			if held==nil then
-				msg="the door is locked."
+				set_msg("the door is locked.")
 			elseif held.name=="sheet music" then
 				inv_rm("sheet music")
 				paper_down=true
 				floorpaper.hide=false
 				--sfx paper down
 			else
-				wrong_item("")
-				msg="you rub the "..held.name.."\non the door.\n\"open sesame!\"\nit doesn't work."
+				--todo pass sfx no
+				set_msg("you rub the "..held.name.."\non the door.\n\"open sesame!\"\nit doesn't work.",0)
 			end
 		end,
 		draw=function()
@@ -585,30 +585,28 @@ local door={
 		act=function()
 			if held==nil then
 				if key_pushed then
-					msg="you peep through the\nkeyhole into what\nappears to be a\nbathroom."
-					--sfx msg
+					set_msg("you peep through the\nkeyhole into what\nappears to be a\nbathroom.")
 				else
-					msg="you try to look\nthrough the keyhole\nbut something is\nblocking it from\nthe other side."
-					--sfx msg
+					set_msg("you try to look\nthrough the keyhole\nbut something is\nblocking it from\nthe other side.")
 				end
 			elseif held.name=="hatpin" then
 				if paper_down then
 					key_pushed=true
-					msg="you push the object\nout of the keyhole\nand it falls onto\nthe sheet music below."
-					inv_rm("hatpin")
-					--sfx pushkey
+					--todo pass sfx pushkey
+					set_msg("you push the object\nout of the keyhole\nand it falls onto\nthe sheet music below.")
+					inv_rm("hatpin")		
 				else
-					msg="if you do that now,\nyou won't be able\nto reach what\nfalls out."
+					set_msg("if you do that now,\nyou won't be able\nto reach what\nfalls out.")
 				end
 			elseif held.name=="bathroom key" then
-				msg="you unlock the door."
+				--todo pass sfx unlock
+				set_msg("you unlock the door.",0)
 				inv_rm("bathroom key")
 				scn_rm("lock")
-				--sfx unlock
 				bdoor_locked=false
 			else
-				wrong_item("")
-				msg="that doesn't fit in\nthe keyhole."
+				--todo pass sfx no
+				set_msg("that doesn't fit in\nthe keyhole.",0)
 			end
 		end
 	}
@@ -680,7 +678,7 @@ function gen_books()
 				x=x,y=y,w=w,h=h-1,
 				txt=txt,
 				act=function()
-					msg=txt
+					set_msg(txt)
 				end,
 				draw=function()
 					rf(x,y,x+w-1,y+h-1,clr[1])
@@ -715,7 +713,7 @@ function init_kitchen_items()
 			rf(75,65,76,66,6)
 		end,
 		act=function()
-			msg="a nail in the wall\nto hang things from."
+			set_msg("a nail in the wall\nto hang things from.")
 		end
 	}
 	local tongs={
@@ -738,13 +736,14 @@ function init_kitchen_items()
 		name="freezer",
 		x=85,y=30,w=34,h=20,
 		act=function()
-			pickup({
-				name="book",
-				desc="the whining - stefan kang",
-				weight=294,
-				sp=50
-			})
-			msg="you found a book\nin the freezer. what's\nthat doing in there?"
+			pickup(
+				{
+					name="book",
+					desc="the whining - stefan kang",
+					weight=294,
+					sp=50
+				},
+				"you found a book\nin the freezer. what's\nthat doing in there?")
 			scn_rm("freezer")
 		end
 	}
@@ -776,8 +775,7 @@ function init_basement_items()
 	local dust={
 		x=13,y=100,w=32,h=8,
 		act=function()
-			msg="there's some brick dust\non the floor."
-			--sfx msg
+			set_msg("there's some brick dust\non the floor.")
 		end
 	}
 	local hat={
@@ -819,14 +817,14 @@ function init_basement_items()
 		x=12,y=82,w=34,h=16,
 		act=function()
 			if held==nil then
-				msg="this brick feels a\nlittle loose. i\ncan't move it with\nmy bare hands."
+				set_msg("this brick feels a\nlittle loose. i\ncan't move it with\nmy bare hands.")
 			elseif held.name=="ice block tongs" then
 				inv_rm("ice block tongs")
 				scn_rm("brick")
 				hat.hide=false
 				hatpin.hide=false
-				msg="you remove the brick to\nreveal a lady's hat\nand a hatpin."
-				--sfx brick pull
+				--todo pass sfx brick pull
+				set_msg("you remove the brick to\nreveal a lady's hat\nand a hatpin.",0)
 			else
 				wrong_item("pull a brick")
 			end
@@ -848,8 +846,7 @@ function init_basement_items()
 				})
 			else
 				if held==nil then
-					msg="an empty light bulb socket"
-					--sfx msg
+					set_msg("an empty light bulb socket")
 				elseif held.name=="light bulb" then
 					inv_rm("light bulb")
 					bulb_taken=false
@@ -900,12 +897,11 @@ function drop_zone_activate(self)
 			pickup(slots[self.idx])
 			slots[self.idx]={}
 		else
-			wrong_item("")
-			msg="there's already something\non that plate."
+			--todo pass sfx no
+			set_msg("there's already something\non that plate.",0)
 		end	
 	elseif held==nil then
-		msg="a metal plate mounted\nonto a large box with\na door on the front."
-		--sfx msg
+		set_msg("a metal plate mounted\nonto a large box with\na door on the front.")
 	else
 		slots[self.idx]=held
 		inv_rm(held.name)
@@ -928,14 +924,12 @@ function init_piano_rm_items()
 		x=9,y=14,w=35,h=36,
 		act=function()
 			if held==nil then
-				msg="such a lovely day\noutside. what a shame\nyou're trapped in here."
-				--sfx msg
+				set_msg("such a lovely day\noutside. what a shame\nyou're trapped in here.")
 			elseif held.name=="binoculars" then
-				msg="through the binoculars, you\nsee an airplane flying\na banner advertisement\n\"101.1 krlc\""
-				--sfx msg
+				set_msg("through the binoculars, you\nsee an airplane flying\na banner advertisement\n\"101.1 krlc\"")
 			else
-				wrong_item("")
-				msg="i'm not sure what that\nwould accomplish."
+				--todo pass sfx no
+				set_msg("i'm not sure what that\nwould accomplish.",0)
 			end
 		end
 	}
@@ -962,13 +956,14 @@ function init_piano_rm_items()
 			spr(56,26,52)
 		end,
 		act=function()
-			pickup({
-				name="screwdriver",
-				desc="equally useful for\nscrewdriving and\nscrew un-driving.",
-				weight=943,
-				sp=56
-			})
-			msg="the piano tuner must\nhave left a screwdriver\nin there. finders\nkeepers!"
+			pickup(
+				{
+					name="screwdriver",
+					desc="equally useful for\nscrewdriving and\nscrew un-driving.",
+					weight=943,
+					sp=56
+				},
+				"the piano tuner must\nhave left a screwdriver\nin there. finders\nkeepers!")
 		end,
 		hide=true
 	}
@@ -976,8 +971,9 @@ function init_piano_rm_items()
 		name="bench",
 		x=18,y=89,w=27,h=3,
 		act=function()
-			pickup(sheet_music_item)
-			msg="you found sheet music\nin the piano bench.\n\"moonlight sonata\""
+			pickup(
+				sheet_music_item,
+				"you found sheet music\nin the piano bench.\n\"moonlight sonata\"")
 			scn_rm("bench")
 		end
 	}
@@ -986,15 +982,14 @@ function init_piano_rm_items()
 		x=17,y=66,w=30,h=9,
 		act=function(self)
 			if held==nil then
-				msg="a place to put\nsheet music."
-				--sfx msg
+				set_msg("a place to put\nsheet music.")
 			elseif held.name=="sheet music" then
 				self.hide=true
 				get_item("stand music").hide=false
 				--sfx paper down
 			else
-				wrong_item("")
-				msg="that doesn't go there."	
+				--todo pass sfx no
+				set_msg("that doesn't go there.")
 			end
 		end
 	}
@@ -1032,7 +1027,7 @@ function init_piano_rm_items()
 		name="box door",
 		x=91,y=80,w=15,h=14,
 		act=function()
-			msg="the door doesn't budge."
+			set_msg("the door doesn't budge.")
 		end,
 		draw=function()
 			rf(92,81,105,93,4)
@@ -1073,7 +1068,8 @@ function check_piano()
 	for i=1,4 do
 		if(piano_hist[i]~=piano_ans[i])return
 	end
-	msg="the piano top pops open!"
+	--todo pass sfx piano open
+	set_msg("the piano top pops open!")
 	get_item("lid","piano_rm").hide=false
 	get_item("screwdriver","piano_rm").hide=false
 	piano_open=true	
@@ -1147,8 +1143,7 @@ function init_bathroom_items()
 	local pic={
 		x=89,y=13,w=22,h=25,
 		act=function()
-			msg="we aim to please.\nplease aim."
-			--sfx msg
+			set_msg("we aim to please.\nplease aim.")
 		end
 	}
 	local scale={
@@ -1158,8 +1153,7 @@ function init_bathroom_items()
 			if held~=nil and held.weight~=nil then
 				weight=held.weight
 			end
-			msg="the readout says: "..weight.."g."
-			--sfx msg
+			set_msg("the readout says: "..weight.."g.")
 		end
 	}
 	local matches={
@@ -1232,12 +1226,12 @@ function init_grate_items()
 		x=8,y=8,w=110,h=111,
 		act=function()
 			if held==nil then
-				msg="it's too dark to\nsee anything."
-				--sfx msg
+				set_msg("it's too dark to\nsee anything.")
 			elseif held.name=="matches" then
 				scn_rm("darkness")
 				key.hide=false
 				inv_rm("matches")
+				--todo sfx matches
 			else
 				wrong_item("get back there")
 			end
@@ -1255,8 +1249,7 @@ function init_grate_items()
 			name="screw"..i,
 			act=function(self)
 				if held==nil then
-					msg="the grate is held closed with\nscrews. you hear something\nrattling around inside."
-					--sfx msg
+					set_msg("the grate is held closed with\nscrews. you hear something\nrattling around inside.")
 				else
 					if held.name=="screwdriver" then
 						grate_open=true
@@ -1389,8 +1382,8 @@ function init_radio_items()
 				
 				for fw in all(fwt) do
 					if fw then
-						msg="naughty..."
-						--sfx no
+						--todo pass sfx no
+						set_msg("naughty...",0)
 					end 
 				end
 				
@@ -1730,11 +1723,9 @@ end
 --todo
 --[[
 
-* sfx
 * two-tone pointer
-* use set_msg instead of msg=
-		- takes sfx as arg, w/ default
 * bathroom performance
+* sfx/music
 
 ----------------
 * mus 0 start/end
