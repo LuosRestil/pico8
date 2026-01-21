@@ -15,7 +15,7 @@ rrf=rrectfill
 
 function _init()
 	scenes=init_scenes()
-	scene=scenes["clr_box"]
+	scene=scenes["start"]
 	init_nav()
 	init_inv_btn()
 end
@@ -276,7 +276,7 @@ end
 --scenes
 door_locked=true
 grate_open=false
-clr_box_open=true
+clr_box_open=false
 rabbit_taken=false
 function init_start()
 	return {
@@ -416,6 +416,10 @@ function init_start_items()
 				sspr(48,8,23,15,96,84)
 			else
 				sspr(0,32,23,21,96,78)
+				if not rabbit_taken then
+					sspr(76,0,3,4,104,86)
+					sspr(76,0,3,4,108,86)
+				end
 			end
 		end
 	}
@@ -528,8 +532,6 @@ local door={
 				inv_rm("sheet music")
 				paper_down=true
 				floorpaper.hide=false
-				printh("placing paper")
-				printh(floorpaper.hide)
 				--sfx paper down
 			else
 				wrong_item("")
@@ -843,9 +845,11 @@ weight_box_open=false
 piano_open=false
 
 function check_weights()
-	if(not weight_box_open)return
+	if(weight_box_open)return
 	for i=1,3 do
-		if(slots[i]~=targets[i])return
+		if slots[i].weight~=targets[i] then
+			return
+		end
 	end
 	get_item("binos").hide=false
 	get_item("box door").hide=true
@@ -1436,6 +1440,7 @@ end
 function init_clr_box_items()
 	local ears={
 		name="ears",
+		hide=true,
 		x=50,y=44,w=32,h=19,
 		act=function()
 			pickup({
@@ -1445,16 +1450,49 @@ function init_clr_box_items()
 				sp=60
 			})
 			scn_rm("ears")
+			rabbit_taken=true
 		end,
 		draw=function()
 			sspr(112,0,11,20,50,44)
 			sspr(112,0,11,20,72,44)
 		end
 	}
-	return {ears}
+	
+	local items={ears}
+	
+	for i=1,3 do
+		local x=22+36*(i-1)
+		
+		for j=1,2 do
+			add(items,{
+				name="clr box btn",
+				x=x,y=99+(j-1)*10,w=15,h=8,
+				act=function()
+					clr_box_code[i]+=j==1 and 1 or -1
+					if clr_box_code[i]>9 then
+						clr_box_code[i]=0
+					elseif clr_box_code[i]<0 then
+						clr_box_code[i]=9
+					end
+					if 
+						clr_box_code[1]==book_clrs.o and
+						clr_box_code[2]==book_clrs.r and
+						clr_box_code[3]==book_clrs.g
+					then
+						ears.hide=false
+						clr_box_open=true
+						for _=1,6 do
+							scn_rm("clr box btn")
+						end
+					end
+				end
+			})
+		end
+	end
+	
+	return items
 end
 
---book_clrs.o
 -->8
 --inv
 inv={}
@@ -1611,7 +1649,6 @@ end
 --string arithmetic
 --a is str, b is int
 function big_add(a,b)
-	printh("add "..a.." + "..b)
 	local carry=0
 	local res=""
 	local to_add=tostr(b)
@@ -1627,7 +1664,6 @@ function big_add(a,b)
 		dig1=
 			(dig1=="" and "0" or dig1)
 		dig1=tonum(dig1)
-		printh(dig1)
 		local dig2=sub(
 			to_add,
 			max(blen-i,0),
@@ -1636,7 +1672,6 @@ function big_add(a,b)
 		dig2=
 			(dig2=="" and "0" or dig2)
 		dig2=tonum(dig2)
-		printh(dig2)
 		local sum=dig1+dig2+carry
 		carry=flr(sum/10)
 		res=tostr(sum%10)..res
@@ -1666,10 +1701,10 @@ end
 
 ]]
 __gfx__
-0000000007000700170000000000007101111111fffffffffffffffffffffffffffffffffff00000077777777777777577777777777777000007777700000000
-00000000707007001677000000007761016666674444444444444444444444444444444444400000777555555555577577755555555557700777777777000000
-00700700070770771666770000776661001666704441111111111111111111111111111444400000775777777777757577577777777775707777777777700000
-00077000000007001666666666666661001666704441444444444449999444444444441444400000777777777777777577777777777777707777777777700000
+0000000007000700170000000000007101111111fffffffffffffffffffffffffffffffffff00700077777777777777577777777777777000007777700000000
+00000000707007001677000000007761016666674444444444444444444444444444444444407e70777555555555577577755555555557700777777777000000
+00700700070770771666770000776661001666704441111111111111111111111111111444407e70775777777777757577577777777775707777777777700000
+00077000000007001666666666666661001666704441444444444449999444444444441444407e70777777777777777577777777777777707777777777700000
 00077000000007001666110000116661000167004441444444444499997944444444441444400000777555555555577577755555555557707777777777700000
 00700700000000001611000000001161000167004441444444444449999444444444441444400000775777777777757577577777777775707777eee777700000
 0000000000000000110000000000001100006000444111111111111111111111111111144440000077777777777777757777777777777770777eeeee77700000
