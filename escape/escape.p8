@@ -14,7 +14,7 @@ rrf=rrectfill
 
 function _init()
 	scenes=init_scenes()
-	scene=scenes["title"]
+	scene=scenes["outside"]
 	init_nav()
 	init_inv_btn()
 end
@@ -50,6 +50,8 @@ function _update60()
 		held=nil
 	end
 	if (btnp(❎)) held=nil
+	
+--	if(scene.update)scene:update()
 end
 
 function _draw()
@@ -183,7 +185,7 @@ function init_scenes()
 		bathroom=init_bathroom(),
 		radio=init_radio(),
 		title=init_title(),
---		outside=init_outside()
+		outside=init_outside()
 	}
 end
 
@@ -335,7 +337,13 @@ function init_start_items()
 	local door={
 		x=51,y=33,w=37,h=64,
 		act=function()
-			msg="a door leading\nto the outside.\nit's locked."
+			if door_locked then
+				msg="a door leading\nto the outside.\nit's locked."
+				--sfx msg
+			else
+				go("outside")
+				-- switch music
+			end
 		end,
 		draw=function()
 			draw_door(48)
@@ -1522,6 +1530,14 @@ function init_clr_box_items()
 	return items
 end
 
+function init_outside()
+	return {
+		draw=function()
+			draw_encoded("8080c2ee9007c0257007c04b900bc020700dc047900dc01e700fc045900fc01c7011c0167006c0279011c0157018c013700ac0259011c012701bc012700cc0249011c011701cc011700ec024900fc011701dc0117018c01b900dc011701dc013701cc017900bc012701cc0127021c0169007c0146001701ac0117025c03060017016c0137027c03060017016c0127027c03160037014c0127025c0356007700cc0147023c03d60027009c0127027c03e6007c012702ac055702bc055702bc05560017029c05760027010c00360017012c05a6003700bc00660017010c05e6008c00a60017006c00260027003c0736005c0056002ccbcb018c05fb0093018b009c050b006302ab006c048b0023036b005c043303db004c03f3041b003c03c3044b002c03a3046b003c0373049b001c036304ab002c034304cb001c033304db001c032304eb001c031304fb001c002b015c0193050b0023015b008c011306fb004c00d3073b004c009301cb0013001b0013058b003c006301db001305cb003c003307db002c001307fb00133d7b002307ab0023001b001303a70013043b001303a7001a0017001307e7001b0013080b0013002b001307cb0013001b001307cb0013001b001307fb001341ee001307ee001a001e0013036b0013001b0013044b001e0013038b0013044b001307cb0023080b0013001b002307db00134ebb0013001b001307eb00130c98001307e8001a0018001307db0018001307ab0013002b001307db0013001b001307eb001307fb0013001b002307db0013199",0,0)
+			print("\^t\^wyou win!",36,56,10)
+		end
+	}
+end
 -->8
 --inv
 inv={}
@@ -1718,7 +1734,6 @@ end
 * two-tone pointer
 * use set_msg instead of msg=
 		- takes sfx as arg, w/ default
-* image offsets?
 * bathroom performance
 
 ----------------
