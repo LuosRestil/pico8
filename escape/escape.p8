@@ -14,7 +14,7 @@ rrf=rrectfill
 
 function _init()
 	scenes=init_scenes()
-	scene=scenes["outside"]
+	scene=scenes["title"]
 	init_nav()
 	init_inv_btn()
 end
