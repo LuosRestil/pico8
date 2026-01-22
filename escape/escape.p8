@@ -1197,19 +1197,6 @@ function init_bathroom()
 			
 			sspr(32,64,9,13,119,72)
 			palt()
-			
-			rrect(56,98,23,7,1,5)
-			rf(57,99,77,103,6)
-			line(76,99,75,100,7)
-			rrect(65,64,5,36,1,5)
-			rf(66,65,68,98,6)
-			line(68,75,68,79,7)
-			line(66,67,68,67,5)
-			rrect(56,56,23,10,1,5)
-			rf(57,57,77,64,6)
-			rrf(58,58,19,6,1,5)
-			line(61,59,73,59,11)
-			line(62,62,72,62,11)
 		end,
 		items=init_bathroom_items()
 	}
@@ -1230,6 +1217,20 @@ function init_bathroom_items()
 				weight=held.weight
 			end
 			set_msg("the readout says: "..weight.."g.")
+		end,
+		draw=function()
+			rrect(56,98,23,7,1,5)
+			rf(57,99,77,103,6)
+			line(76,99,75,100,7)
+			rrect(65,64,5,36,1,5)
+			rf(66,65,68,98,6)
+			line(68,75,68,79,7)
+			line(66,67,68,67,5)
+			rrect(56,56,23,10,1,5)
+			rf(57,57,77,64,6)
+			rrf(58,58,19,6,1,5)
+			line(61,59,73,59,11)
+			line(62,62,72,62,11)
 		end
 	}
 	local matches={
@@ -1800,7 +1801,6 @@ end
 --todo
 --[[
 
-* bathroom performance
 * sfx/music
 
 ----------------
