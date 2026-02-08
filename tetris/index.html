@@ -291,13 +291,13 @@
 				{
 					// stick
 
-					mask = 0xf; // dpad
-					var cx = 0 + r*3;
-					var cy = h - r*3;
+					// mask = 0xf; // dpad
+					var cx = 0 + r*3; // center x
+					var cy = h - r*3; // center y
 
-					deadzone = r/3;
-					var dx = x - cx;
-					var dy = y - cy;
+					deadzone = r/3; // radius around center where no input registers
+					var dx = x - cx; // distance from center
+					var dy = y - cy; // distance from center
 
 					if (abs(dx) > abs(dy) * 0.6) // horizontal 
 					{
@@ -314,7 +314,7 @@
 				{
 					// button; diagonal split from bottom right corner
 				
-					mask = 0x30;
+					// mask = 0x30;
 					
 					// one or both of [X], [O]
 					if ( (h-y) > (w-x) * 0.8) b |= 0x10;
