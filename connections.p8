@@ -6,22 +6,17 @@ __lua__
 debug=false
 
 local cam={x=0,y=0}
-trees={}
-treeph=114
-treesp={x=32,y=32,w=16,h=16}
 grass=112
 blockgrass=116
 msg=nil
-interactables={}
-npcs={}
 
-local ents={}
+ents={}
 
 function _init()
 	init_plr()
 	
 	local phmap={
-		[treeph]=new_tree
+		[114]=new_tree
 	}
 	
 	for row=0,63 do
@@ -34,6 +29,7 @@ function _init()
 	end
 	
 	add(ents,olaf(55,40))
+	add(ents,dead_olaf(54,45))
 	
 	qsort(ents,function(a,b)
 		return a.base<b.base
@@ -122,10 +118,14 @@ function new_tree(col,row)
 	return {
 		x=col*8,
 		y=row*8,
+		hb={
+			x=col*8,y=(row+1)*8,
+			w=16,h=8
+		},
 		base=(row+1)*8+7,
 		w=16,h=8,
 		interact=function(self)
-			msg="i'M JUST A TREE,\nBUT THANKS FOR\nNOTICING!"
+			msg="i'm just a tree,\nbut thanks for\nnoticing!"
 		end,
 		draw=function(self)
 			spr(68,self.x,self.y,2,2)
@@ -134,12 +134,12 @@ function new_tree(col,row)
 end
 
 function olaf(col,row)
-	mset(55,40,blockgrass)
+	mset(col,row,blockgrass)
 	return {
-		x=col*8,
-		y=row*8,
-		base=row*8+7,
+		x=col*8,y=row*8,
 		w=8,h=8,
+		hb={x=col*8,y=row*8,w=8,h=8},
+		base=row*8+7,
 		sp=9,
 		
 		draw=function(self)
@@ -152,6 +152,25 @@ function olaf(col,row)
 		interact=function(self)
 			msg="hi, i'm olaf,\nand i like\nwarm hugs!"
 		end
+	}
+end
+
+function dead_olaf(col,row)
+	mset(col,row,blockgrass)
+	return {
+		x=col*8,
+		y=row*8,
+		hb={x=col*8,y=row*8,w=8,h=8},
+		base=row*8+7,
+		w=8,h=8,
+		sp=9,
+		
+		draw=function(self)
+			palt(0,false)
+			palt(11,true)
+			spr(self.sp,self.x,self.y)
+			palt()
+		end,
 	}
 end
 -->8
@@ -314,7 +333,10 @@ function init_plr()
 			
 			if btnp(🅾️) then
 				local i=self:get_interact()
-				if i~=nil then
+				if
+					i~=nil and 
+					i.interact~=nil 
+				then
 					i:interact()
 				end
 			end
@@ -361,7 +383,7 @@ function init_plr()
 				
 				self.rec=rec
 				
-				if colliding(rec,i) then
+				if colliding(rec,i.hb) then
 					return i
 				end
 				
