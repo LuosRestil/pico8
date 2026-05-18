@@ -15,50 +15,30 @@ msg=nil
 interactables={}
 npcs={}
 
+local ents={}
+
 function _init()
 	init_plr()
+	
+	local phmap={
+		[treeph]=new_tree
+	}
+	
 	for row=0,63 do
 		for col=0,127 do
 			local sp=mget(col,row)
-			if sp==treeph then
-				add(trees,{
-					col=col,row=row,
-					y=(row+1)*8+7
-				})
-				add(interactables,{
-					x=col*8,
-					y=(row+1)*8,
-					w=16,h=8,
-					interact=function(self)
-						msg="i'M JUST A TREE,\nBUT THANKS FOR\nNOTICING!"
-					end
-				})
-				mset(col,row,grass)
-				mset(col,row+1,blockgrass)
-				mset(col+1,row+1,blockgrass)
+			if phmap[sp] then
+				add(ents,phmap[sp](col,row))
 			end
 		end
 	end
 	
+	add(ents,olaf(55,40))
 	
-	add(npcs,{
-					x=55*8,
-					y=40*8,
-					yidx=40*8+7,
-					w=8,h=8,
-					sp=9,
-					draw=function(self)
-						palt(0,false)
-						palt(11,true)
-						spr(self.sp,self.x,self.y)
-						palt()
-					end,
-					interact=function(self)
-						msg="hi, i'm olaf,\nand i like\nwarm hugs! "
-					end
-				})
-	add(interactables,npcs[1])
-	mset(55,40,blockgrass)
+	qsort(ents,function(a,b)
+		return a.base<b.base
+	end)
+	
 end
 
 function _update()
@@ -76,43 +56,25 @@ function _draw()
 	local my=flr(cam.y/8)
 	map(mx,my,mx*8,my*8,17,17)	
 	
-	local tree_idx=1
-	while tree_idx<=#trees do
-		local tree=trees[tree_idx]
-		if tree.y>plr.y+7 then
+	local ent_idx=1
+	while ent_idx<=#ents do
+		local ent=ents[ent_idx]
+		if ent.base>plr.base then
 			break
 		end
-		draw_tree(tree)
-		tree_idx+=1
-	end
-	
-	local npc_idx=1
-	while npc_idx<=#npcs do
-		local npc=npcs[npc_idx]
-		if npc.yidx>plr.y+7 then
-			break
-		end
-		npc:draw()
-		npc_idx+=1
+		ent:draw()
+		ent_idx+=1
 	end
 	
 	plr:draw()
 	
-	for i=tree_idx,#trees do
-		draw_tree(trees[i])
-	end
-	
-	for i=npc_idx,#npcs do
-		npcs[i]:draw()
+	for i=ent_idx,#ents do
+		ents[i]:draw()
 	end
 	
 	draw_msg()
 	
-	if debug then
-		for i in all(interactables) do
-			rect(i.x,i.y,i.x+i.w-1,i.y+i.h-1,8)
-		end
-	
+	if debug then	
 		if plr.rec then
 			rectfill(plr.rec.x,plr.rec.y,
 				plr.rec.x+plr.rec.w-1,
@@ -120,13 +82,6 @@ function _draw()
 				14)
 		end
 	end
-end
-
-function draw_tree(tree)
-	--tree=col,row,y
-	sspr(treesp.x,treesp.y,
-		treesp.w,treesp.h,
-		tree.col*8,tree.row*8)
 end
 
 function draw_msg()
@@ -159,11 +114,52 @@ function draw_msg()
 		cam.x+padx+1,cam.y+pady+1,
 		7)
 end
+
+function new_tree(col,row)
+	mset(col,row,grass)
+	mset(col,row+1,blockgrass)
+	mset(col+1,row+1,blockgrass)
+	return {
+		x=col*8,
+		y=row*8,
+		base=(row+1)*8+7,
+		w=16,h=8,
+		interact=function(self)
+			msg="i'M JUST A TREE,\nBUT THANKS FOR\nNOTICING!"
+		end,
+		draw=function(self)
+			spr(68,self.x,self.y,2,2)
+		end
+	}
+end
+
+function olaf(col,row)
+	mset(55,40,blockgrass)
+	return {
+		x=col*8,
+		y=row*8,
+		base=row*8+7,
+		w=8,h=8,
+		sp=9,
+		
+		draw=function(self)
+			palt(0,false)
+			palt(11,true)
+			spr(self.sp,self.x,self.y)
+			palt()
+		end,
+		
+		interact=function(self)
+			msg="hi, i'm olaf,\nand i like\nwarm hugs!"
+		end
+	}
+end
 -->8
 --plr
 function init_plr()
 	plr={
 		x=475,y=344,
+		base=344+7,
 		spd=1,
 		sp=33,
 		hb={x=2,y=5,w=4,h=3},
@@ -308,7 +304,8 @@ function init_plr()
 			end
 			self.x+=movex and dir.x or 0
 			self.y+=movey and dir.y or 0
-			
+			self.base=self.y+7			
+
 			self:animate()
 			
 			if debug then
@@ -326,7 +323,11 @@ function init_plr()
 		get_interact=function(self)
 			if self.heading==nil then return end
 			
-			for i in all(interactables) do
+			for i in all(ents) do
+				if i==self then
+					goto continue
+				end
+				
 				local rec=nil
 				if self.heading=="down" then
 					rec={
@@ -363,6 +364,8 @@ function init_plr()
 				if colliding(rec,i) then
 					return i
 				end
+				
+				::continue::
 			end
 			
 			return nil
@@ -416,6 +419,67 @@ function colliding(a,b)
 		a.y<b.y+b.h and
 		b.y<a.y+a.h
 	)
+end
+
+-- qsort(a,c,l,r)
+--
+-- a
+--    array to be sorted,
+--    in-place
+-- c
+--    comparator function(a,b)
+--    (default=return a<b)
+-- l
+--    first index to be sorted
+--    (default=1)
+-- r
+--    last index to be sorted
+--    (default=#a)
+--
+-- typical usage:
+--   qsort(array)
+--   -- custom descending sort
+--   qsort(array,function(a,b) return a>b end)
+--
+function qsort(a,c,l,r)
+	c,l,r=c or function(a,b) return a<b end,l or 1,r or #a
+	if l<r then
+		if c(a[r],a[l]) then
+			a[l],a[r]=a[r],a[l]
+		end
+		local lp,k,rp,p,q=l+1,l+1,r-1,a[l],a[r]
+		while k<=rp do
+			local swaplp=c(a[k],p)
+			-- "if a or b then else"
+			-- saves a token versus
+			-- "if not (a or b) then"
+			if swaplp or c(a[k],q) then
+			else
+				while c(q,a[rp]) and k<rp do
+					rp-=1
+				end
+				a[k],a[rp],swaplp=a[rp],a[k],c(a[rp],p)
+				rp-=1
+			end
+			if swaplp then
+				a[k],a[lp]=a[lp],a[k]
+				lp+=1
+			end
+			k+=1
+		end
+		lp-=1
+		rp+=1
+		-- sometimes lp==rp, so 
+		-- these two lines *must*
+		-- occur in sequence;
+		-- don't combine them to
+		-- save a token!
+		a[l],a[lp]=a[lp],a[l]
+		a[r],a[rp]=a[rp],a[r]
+		qsort(a,c,l,lp-1       )
+		qsort(a,c,  lp+1,rp-1  )
+		qsort(a,c,       rp+1,r)
+	end
 end
 -->8
 --notes
