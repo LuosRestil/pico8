@@ -44,6 +44,7 @@ function _init()
 	add(npcs,{
 					x=55*8,
 					y=40*8,
+					yidx=40*8+7,
 					w=8,h=8,
 					sp=9,
 					draw=function(self)
@@ -53,7 +54,7 @@ function _init()
 						palt()
 					end,
 					interact=function(self)
-						msg="hi, i'm olaf,\nand i like\nwarn hugs! "
+						msg="hi, i'm olaf,\nand i like\nwarm hugs! "
 					end
 				})
 	add(interactables,npcs[1])
@@ -88,7 +89,7 @@ function _draw()
 	local npc_idx=1
 	while npc_idx<=#npcs do
 		local npc=npcs[npc_idx]
-		if npc.y>plr.y+7 then
+		if npc.yidx>plr.y+7 then
 			break
 		end
 		npc:draw()
