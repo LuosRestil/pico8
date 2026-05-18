@@ -1,8 +1,10 @@
 pico-8 cartridge // http://www.pico-8.com
 version 43
 __lua__
---using maps
+--connections
 --by luos restil
+debug=false
+
 local cam={x=0,y=0}
 trees={}
 treeph=114
@@ -23,9 +25,9 @@ function _init()
 					y=(row+1)*8+7
 				})
 				add(interactables,{
-					x=col*8+1,
+					x=col*8,
 					y=(row+1)*8,
-					w=13,h=5,
+					w=16,h=8,
 					interact=function(self)
 						msg="i'M JUST A TREE,\nBUT THANKS FOR\nNOTICING!"
 					end
@@ -71,8 +73,17 @@ function _draw()
 	
 	draw_msg()
 	
-	for i in all(interactables) do
-		rect(i.x,i.y,i.x+i.w,i.y+i.h,8)
+	if debug then
+		for i in all(interactables) do
+			rect(i.x,i.y,i.x+i.w-1,i.y+i.h-1,8)
+		end
+	
+		if plr.rec then
+			rectfill(plr.rec.x,plr.rec.y,
+				plr.rec.x+plr.rec.w-1,
+				plr.rec.y+plr.rec.h-1,
+				14)
+		end
 	end
 end
 
@@ -120,6 +131,7 @@ function init_plr()
 		x=475,y=344,
 		spd=1,
 		sp=33,
+		hb={x=2,y=5,w=4,h=3},
 		cnrs={
 			tl={2,5,10},
 			tr={5,5,10},
@@ -158,11 +170,41 @@ function init_plr()
 			spr(abs(self.sp),pos.x,pos.y,1,1,self.sp<0)
 			palt()
 			
-			print(
-				self.x..","..self.y,
-				self.x,self.y-10,
-				10
-			)
+			--debug
+			if debug then
+				print(
+					self.x..","..self.y,
+					self.x,self.y-10,
+					10
+				)
+				rect(
+					self.x+self.hb.x,
+					self.y+self.hb.y,
+					self.x+self.hb.x+self.hb.w-1,
+					self.y+self.hb.y+self.hb.h-1,
+					12)
+				circ(
+					self.x+self.cnrs.tl[1],
+					self.y+self.cnrs.tl[2],
+					0,
+					self.cnrs.tl[3])
+				circ(
+					self.x+self.cnrs.tr[1],
+					self.y+self.cnrs.tr[2],
+					0,
+					self.cnrs.tr[3])
+				circ(
+					self.x+self.cnrs.bl[1],
+					self.y+self.cnrs.bl[2],
+					0,
+					self.cnrs.bl[3])
+				circ(
+					self.x+self.cnrs.br[1],
+					self.y+self.cnrs.br[2],
+					0,
+					self.cnrs.br[3])
+				end
+			
 		end,
 		
 		update=function(self)
@@ -234,6 +276,10 @@ function init_plr()
 			
 			self:animate()
 			
+			if debug then
+				self:get_interact()
+			end
+			
 			if btnp(🅾️) then
 				local i=self:get_interact()
 				if i~=nil then
@@ -249,25 +295,35 @@ function init_plr()
 				local rec=nil
 				if self.heading=="down" then
 					rec={
-						x=self.x,w=7,
-						y=self.y+9,h=1
+						x=self.x+self.hb.x,
+						y=self.y+self.hb.y+self.hb.h,
+						w=self.hb.w,
+						h=1
 					}
 				elseif self.heading=="up" then
 					rec={
-						x=self.x,w=7,
-						y=self.y-1,h=1
+						x=self.x+self.hb.x,
+						y=self.y+self.hb.y-1,
+						w=self.hb.w,
+						h=1
 					}
 				elseif self.heading=="left" then
 					rec={
-						x=self.x-1,w=1,
-						y=self.y,h=7
+						x=self.x+self.hb.x-1,
+						y=self.y+self.hb.y,
+						w=1,
+						h=self.hb.h
 					}
 				elseif self.heading=="right" then
 					rec={
-						x=self.x+9,w=1,
-						y=self.y,h=7
+						x=self.x+self.hb.x+self.hb.w,
+						y=self.y+self.hb.y,
+						w=1,
+						h=self.hb.h
 					}
 				end
+				
+				self.rec=rec
 				
 				if colliding(rec,i) then
 					return i
