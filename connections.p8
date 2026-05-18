@@ -3,13 +3,14 @@ version 43
 __lua__
 --using maps
 --by luos restil
-frm=0
 local cam={x=0,y=0}
 trees={}
 treeph=114
 treesp={x=32,y=32,w=16,h=16}
 grass=112
 blockgrass=116
+msg=nil
+interactables={}
 
 function _init()
 	init_plr()
@@ -21,6 +22,14 @@ function _init()
 					col=col,row=row,
 					y=(row+1)*8+7
 				})
+				add(interactables,{
+					x=col*8+1,
+					y=(row+1)*8,
+					w=13,h=5,
+					interact=function(self)
+						msg="i'M JUST A TREE,\nBUT THANKS FOR\nNOTICING!"
+					end
+				})
 				mset(col,row,grass)
 				mset(col,row+1,blockgrass)
 				mset(col+1,row+1,blockgrass)
@@ -30,12 +39,10 @@ function _init()
 end
 
 function _update()
-	frm+=1
-	
 	plr:update()
 	
-	cam.x=mid(plr.x+7-64,0,1016-64)
-	cam.y=mid(plr.y+7-64,0,504-64)
+	cam.x=mid(plr.x+7-64,64,1016-64)
+	cam.y=mid(plr.y+7-64,64,504-64)
 end
 
 function _draw()
@@ -61,6 +68,12 @@ function _draw()
 	for i=tree_idx,#trees do
 		draw_tree(trees[i])
 	end
+	
+	draw_msg()
+	
+	for i in all(interactables) do
+		rect(i.x,i.y,i.x+i.w,i.y+i.h,8)
+	end
 end
 
 function draw_tree(tree)
@@ -68,6 +81,37 @@ function draw_tree(tree)
 	sspr(treesp.x,treesp.y,
 		treesp.w,treesp.h,
 		tree.col*8,tree.row*8)
+end
+
+function draw_msg()
+	if msg==nil then return end
+	local lines=split(msg,"\n")
+	local longest=0
+	for l in all(lines) do
+		if #l>longest then
+			longest=#l
+		end
+	end
+	
+	local w=(longest)*4
+	local h=#lines*6
+	local padx=(128-w)/2
+	local pady=(128-h)/2
+	--background
+	rrectfill(
+		cam.x+padx-2,cam.y+pady-2,
+		w+5,h+5,
+		1,13)
+	--border
+	rrect(
+		cam.x+padx-2,cam.y+pady-2,
+		w+5,h+5,
+		1,7)
+	--text
+	print(
+		msg,
+		cam.x+padx+1,cam.y+pady+1,
+		7)
 end
 -->8
 --plr
@@ -113,6 +157,12 @@ function init_plr()
 			palt(0,false)
 			spr(abs(self.sp),pos.x,pos.y,1,1,self.sp<0)
 			palt()
+			
+			print(
+				self.x..","..self.y,
+				self.x,self.y-10,
+				10
+			)
 		end,
 		
 		update=function(self)
@@ -123,14 +173,22 @@ function init_plr()
 			if(btn(⬆️))dir.y-=spd
 			if(btn(⬇️))dir.y+=spd
 			
+			if dir.x~=0 or dir.y ~= 0 then
+				msg=nil
+			end
+			
 			if dir.y>0 then
 				self:set_anim("down")
+				self.heading="down"
 			elseif dir.y<0 then
 				self:set_anim("up")
+				self.heading="up"
 			elseif dir.x<0 then
 				self:set_anim("left")
+				self.heading="left"
 			elseif dir.x>0 then
 				self:set_anim("right")
+				self.heading="right"
 			else
 				local ds={"left","right","up","down"}
 				local was_moving=false
@@ -175,6 +233,48 @@ function init_plr()
 			self.y+=movey and dir.y or 0
 			
 			self:animate()
+			
+			if btnp(🅾️) then
+				local i=self:get_interact()
+				if i~=nil then
+					i:interact()
+				end
+			end
+		end,
+		
+		get_interact=function(self)
+			if self.heading==nil then return end
+			
+			for i in all(interactables) do
+				local rec=nil
+				if self.heading=="down" then
+					rec={
+						x=self.x,w=7,
+						y=self.y+9,h=1
+					}
+				elseif self.heading=="up" then
+					rec={
+						x=self.x,w=7,
+						y=self.y-1,h=1
+					}
+				elseif self.heading=="left" then
+					rec={
+						x=self.x-1,w=1,
+						y=self.y,h=7
+					}
+				elseif self.heading=="right" then
+					rec={
+						x=self.x+9,w=1,
+						y=self.y,h=7
+					}
+				end
+				
+				if colliding(rec,i) then
+					return i
+				end
+			end
+			
+			return nil
 		end,
 		
 		animate=function(self)
@@ -217,6 +317,23 @@ end
 function add_pts(a,b)
 	return {a[1]+b[1],a[2]+b[2]}
 end
+
+function colliding(a,b)
+	return (
+		a.x<b.x+b.w and
+		b.x<a.x+a.w and
+		a.y<b.y+b.h and
+		b.y<a.y+a.h
+	)
+end
+-->8
+--notes
+
+--[[
+
+* fix interaction hitboxes
+
+]]
 __gfx__
 0000000044bbbb44bbbbbbbb44bbbb44bbbbbbbbbbb4444bbbbbbbbb000000000000000000000000000000000000000000000000000000000000000000000000
 000000004e4444e444bbbb444444444444bbbb44bb444e4bbbb4444b000000000000000000000000000000000000000000000000000000000000000000000000
