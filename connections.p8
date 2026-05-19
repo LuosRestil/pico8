@@ -5,14 +5,28 @@ __lua__
 --by luos restil
 debug=false
 
-local cam={x=0,y=0}
+cam={x=0,y=0}
 grass=112
 blockgrass=116
 msg=nil
 
+state=nil
+states={
+	set=function(self,name)
+		if state~=self[name] then
+			state=self[name]
+			if(state.init)state:init()
+		end
+	end
+}
+
 ents={}
 
 function _init()
+	states["game"]=game_state()
+	states["msg"]=msg_state()
+	states:set("game")
+
 	init_plr()
 	
 	local phmap={
@@ -38,77 +52,16 @@ function _init()
 end
 
 function _update()
-	plr:update()
-	
-	cam.x=mid(plr.x+7-64,64,1016-64)
-	cam.y=mid(plr.y+7-64,64,504-64)
+	if msg~=nil then
+		states:set("msg")
+	else
+		states:set("game")
+	end
+	state:update()
 end
 
 function _draw()
-	cls()
-	camera(cam.x,cam.y)
-	--only draw seen part of map
-	local mx=flr(cam.x/8)
-	local my=flr(cam.y/8)
-	map(mx,my,mx*8,my*8,17,17)	
-	
-	local ent_idx=1
-	while ent_idx<=#ents do
-		local ent=ents[ent_idx]
-		if ent.base>plr.base then
-			break
-		end
-		ent:draw()
-		ent_idx+=1
-	end
-	
-	plr:draw()
-	
-	for i=ent_idx,#ents do
-		ents[i]:draw()
-	end
-	
-	draw_msg()
-	
-	if debug then	
-		if plr.rec then
-			rectfill(plr.rec.x,plr.rec.y,
-				plr.rec.x+plr.rec.w-1,
-				plr.rec.y+plr.rec.h-1,
-				14)
-		end
-	end
-end
-
-function draw_msg()
-	if msg==nil then return end
-	local lines=split(msg,"\n")
-	local longest=0
-	for l in all(lines) do
-		if #l>longest then
-			longest=#l
-		end
-	end
-	
-	local w=(longest)*4
-	local h=#lines*6
-	local padx=(128-w)/2
-	local pady=(128-h)/2
-	--background
-	rrectfill(
-		cam.x+padx-2,cam.y+pady-2,
-		w+5,h+5,
-		1,13)
-	--border
-	rrect(
-		cam.x+padx-2,cam.y+pady-2,
-		w+5,h+5,
-		1,7)
-	--text
-	print(
-		msg,
-		cam.x+padx+1,cam.y+pady+1,
-		7)
+	state:draw()
 end
 
 function new_tree(col,row)
@@ -172,6 +125,42 @@ function dead_olaf(col,row)
 			palt()
 		end,
 	}
+end
+
+function draw_map()
+	cls()
+	camera(cam.x,cam.y)
+	--only draw seen part of map
+	local mx=flr(cam.x/8)
+	local my=flr(cam.y/8)
+	map(mx,my,mx*8,my*8,17,17)
+end
+
+function draw_entities()
+	local ent_idx=1
+	while ent_idx<=#ents do
+		local ent=ents[ent_idx]
+		if ent.base>plr.base then
+			break
+		end
+		ent:draw()
+		ent_idx+=1
+	end
+	
+	plr:draw()
+	
+	for i=ent_idx,#ents do
+		ents[i]:draw()
+	end
+	
+	if debug then	
+		if plr.rec then
+			rectfill(plr.rec.x,plr.rec.y,
+				plr.rec.x+plr.rec.w-1,
+				plr.rec.y+plr.rec.h-1,
+				14)
+		end
+	end
 end
 -->8
 --plr
@@ -517,6 +506,77 @@ end
 		their sprite
 
 ]]
+-->8
+--states
+function game_state()
+	return {
+		update=function(self)
+			plr:update()
+	
+			cam.x=mid(plr.x+7-64,64,1016-64)
+			cam.y=mid(plr.y+7-64,64,504-64)
+		end,
+		draw=function(self)
+			draw_map()
+			draw_entities()
+		end
+	}
+end
+
+
+function msg_state()
+	return {
+		init=function(self)
+			self.display=""
+			self.char_idx=1
+		end,
+		update=function(self)
+			if #self.display~=#msg then
+				self.display=sub(msg,1,self.char_idx)
+				self.char_idx+=1
+			else
+				if btnp(🅾️) then
+					msg=nil
+				end	
+			end
+		end,
+		draw=function(self)
+			draw_map()
+			draw_entities()
+			self:draw_msg()
+		end,
+		draw_msg=function(self)
+			if msg==nil then return end
+			local lines=split(msg,"\n")
+			local longest=0
+			for l in all(lines) do
+				if #l>longest then
+					longest=#l
+				end
+			end
+			
+			local w=(longest)*4
+			local h=#lines*6
+			local padx=(128-w)/2
+			local pady=(128-h)/2
+			--background
+			rrectfill(
+				cam.x+padx-2,cam.y+pady-2,
+				w+5,h+5,
+				1,13)
+			--border
+			rrect(
+				cam.x+padx-2,cam.y+pady-2,
+				w+5,h+5,
+				1,7)
+			--text
+			print(
+				self.display,
+				cam.x+padx+1,cam.y+pady+1,
+				7)
+		end
+	}
+end
 __gfx__
 0000000044bbbb44bbbbbbbb44bbbb44bbbbbbbbbbb4444bbbbbbbbb000000000aaaaaa0bb7777bb000000000000000000000000000000000000000000000000
 000000004e4444e444bbbb444444444444bbbb44bb444e4bbbb4444b00000000af7ff7fab707077b000000000000000000000000000000000000000000000000
