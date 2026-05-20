@@ -8,7 +8,7 @@ debug=false
 cam={x=0,y=0}
 grass=112
 blockgrass=116
-msg=nil
+msgs=nil
 
 state=nil
 states={
@@ -52,7 +52,7 @@ function _init()
 end
 
 function _update()
-	if msg~=nil then
+	if msgs~=nil then
 		states:set("msg")
 	else
 		states:set("game")
@@ -78,7 +78,7 @@ function new_tree(col,row)
 		base=(row+1)*8+7,
 		w=16,h=8,
 		interact=function(self)
-			msg="i'm just a tree,\nbut thanks for\nnoticing!"
+			msgs={"i'm just a tree,\nbut thanks for\nnoticing!"}
 		end,
 		draw=function(self)
 			spr(68,self.x,self.y,2,2)
@@ -103,7 +103,11 @@ function olaf(col,row)
 		end,
 		
 		interact=function(self)
-			msg="hi, i'm olaf,\nand i like\nwarm hugs!"
+			msgs={
+					"hi, i'm olaf,\nand i like\nwarm hugs!",
+					"i don't have\na skull...",
+					"or bones..."
+				}
 		end
 	}
 end
@@ -253,10 +257,6 @@ function init_plr()
 			if(btn(➡️))dir.x+=spd
 			if(btn(⬆️))dir.y-=spd
 			if(btn(⬇️))dir.y+=spd
-			
-			if dir.x~=0 or dir.y ~= 0 then
-				msg=nil
-			end
 			
 			if dir.y>0 then
 				self:set_anim("down")
@@ -504,7 +504,9 @@ end
 		only working because they
 		have a lot of space outside
 		their sprite
-
+* symbol indicating end of
+		msg (blinking triangle thing)
+		
 ]]
 -->8
 --states
@@ -528,26 +530,37 @@ function msg_state()
 	return {
 		init=function(self)
 			self.display=""
+			self.msg_idx=1
+			self.msg=msgs[self.msg_idx]
 			self.char_idx=1
 		end,
+		
 		update=function(self)
-			if #self.display~=#msg then
-				self.display=sub(msg,1,self.char_idx)
+			if 
+				#self.display~=#self.msg
+			then
+				self.display=sub(self.msg,1,self.char_idx)
 				self.char_idx+=1
-			else
-				if btnp(🅾️) then
-					msg=nil
+			elseif btnp(🅾️) then
+				if self.msg_idx==#msgs then
+					msgs=nil
+				else
+					self.msg_idx+=1
+					self.msg=msgs[self.msg_idx]
+					self.char_idx=1
+					self.display=""
 				end	
 			end
 		end,
+		
 		draw=function(self)
 			draw_map()
 			draw_entities()
 			self:draw_msg()
 		end,
 		draw_msg=function(self)
-			if msg==nil then return end
-			local lines=split(msg,"\n")
+			if msgs==nil then return end
+			local lines=split(self.msg,"\n")
 			local longest=0
 			for l in all(lines) do
 				if #l>longest then
