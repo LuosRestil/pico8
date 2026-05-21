@@ -9,6 +9,7 @@ cam={x=0,y=0}
 grass=112
 blockgrass=116
 msgs=nil
+dialog=nil
 
 state=nil
 states={
@@ -25,6 +26,7 @@ ents={}
 function _init()
 	states["game"]=game_state()
 	states["msg"]=msg_state()
+	states["dialog"]=dialog_state()
 	states:set("game")
 
 	init_plr()
@@ -52,11 +54,12 @@ function _init()
 end
 
 function _update()
-	if msgs~=nil then
-		states:set("msg")
-	else
+	if dialog==nil then
 		states:set("game")
+	elseif state==states["game"] then
+		states:set("dialog")
 	end
+	
 	state:update()
 end
 
@@ -103,11 +106,34 @@ function olaf(col,row)
 		end,
 		
 		interact=function(self)
-			msgs={
-					"hi, i'm olaf,\nand i like\nwarm hugs!",
-					"i don't have\na skull...",
-					"or bones..."
+			dialog={
+				{msg="hi, i'm olaf,\nand i like \nwarm hugs!"},
+				{
+					msg="do you want to play?",
+					options={
+						{
+							txt="yes",
+							choose=function()
+								dialog={{msg="hooray!"}}
+							end
+						},
+						{
+							txt="no",
+							choose=function()
+								dialog={
+									{msg="aw, sad..."}
+								}
+							end
+						}
+					}
 				}
+			}
+			
+--			msgs={
+--				"hi, i'm olaf,\nand i like\nwarm hugs!",
+--				"i don't have\na skull...",
+--				"or bones..."
+--			}
 		end
 	}
 end
@@ -504,9 +530,6 @@ end
 		only working because they
 		have a lot of space outside
 		their sprite
-* symbol indicating end of
-		msg (blinking triangle thing)
-		
 ]]
 -->8
 --states
@@ -585,6 +608,108 @@ function msg_state()
 			--text
 			print(
 				self.display,
+				cam.x+padx+1,cam.y+pady+1,
+				7)
+		end
+	}
+end
+
+function dialog_state()
+	return {
+		init=function(self)
+			self.display=""
+			self.idx=1
+			self.step=dialog[self.idx]
+			self.char_idx=1
+			self.opt_idx=1
+		end,
+		
+		update=function(self)
+			if 
+				#self.display<#self.step.msg
+			then
+				self.display=sub(self.step.msg,1,self.char_idx)
+				self.char_idx+=1
+			else
+				if not self.step.options then
+					if btnp(🅾️) then
+						if self.idx==#dialog then
+							dialog=nil
+						else
+							self.idx+=1
+							self.step=dialog[self.idx]
+							self.char_idx=1
+							self.display=""
+						end	
+					end
+				else
+					if 
+						btnp(⬆️) and 
+						self.opt_idx>1 
+					then
+						self.opt_idx-=1
+					elseif 
+						btnp(⬇️) and 
+						self.opt_idx<#self.step.options 
+					then
+						self.opt_idx+=1
+					elseif btnp(🅾️) then
+						self.step.options[self.opt_idx].choose()	
+						self:init()
+					end
+				end
+			end
+		end,
+		
+		draw=function(self)
+			draw_map()
+			draw_entities()
+			self:draw_dialog()
+		end,
+		
+		draw_dialog=function(self)
+			if dialog==nil then return end
+			local lines=split(self.step.msg,"\n")
+			if self.step.options then
+				for option in all(self.step.options) do
+					add(lines,"  "..option.txt)
+				end
+			end
+			local longest=0
+			for l in all(lines) do
+				if #l>longest then
+					longest=#l
+				end
+			end
+			
+			local w=(longest)*4
+			local h=#lines*6
+			local padx=(128-w)/2
+			local pady=(128-h)/2
+			--background
+			rrectfill(
+				cam.x+padx-2,cam.y+pady-2,
+				w+5,h+5,
+				1,13)
+			--border
+			rrect(
+				cam.x+padx-2,cam.y+pady-2,
+				w+5,h+5,
+				1,7)
+			--text
+			local toprint=self.display
+			if 
+				self.step.options and
+				#self.display==#self.step.msg
+			then
+				for i=1,#self.step.options do
+					local prefix=(i==self.opt_idx) and "> " or "  "
+					toprint=toprint.."\n"..prefix..self.step.options[i].txt
+				end
+			end
+			
+			print(
+				toprint,
 				cam.x+padx+1,cam.y+pady+1,
 				7)
 		end
