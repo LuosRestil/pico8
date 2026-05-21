@@ -81,7 +81,13 @@ function new_tree(col,row)
 		base=(row+1)*8+7,
 		w=16,h=8,
 		interact=function(self)
-			msgs={"i'm just a tree,\nbut thanks for\nnoticing!"}
+			if col==56 then
+				dialog={
+					{
+						msg="i'm just a tree,\nbut thanks for\nnoticing!"
+					}
+				}
+			end
 		end,
 		draw=function(self)
 			spr(68,self.x,self.y,2,2)
@@ -123,17 +129,16 @@ function olaf(col,row)
 								dialog={
 									{msg="aw, sad..."}
 								}
+								self.interact=function(self)
+									dialog={
+										{msg="..."}
+									}
+								end
 							end
 						}
 					}
 				}
 			}
-			
---			msgs={
---				"hi, i'm olaf,\nand i like\nwarm hugs!",
---				"i don't have\na skull...",
---				"or bones..."
---			}
 		end
 	}
 end
