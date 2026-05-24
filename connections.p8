@@ -756,7 +756,7 @@ function trans_state()
 	return {
 		maxclip=164,
 		clipsize=164,
-		speed=5,
+		speed=8,
 		shrinking=true,
 		init=function(self,...)
 			local args={...}
@@ -794,24 +794,17 @@ function trans_state()
 			draw_map()
 			draw_entities()
 			
-			palt(11,true)
-		 palt(0,false)
-		 sspr(80,32,16,16,
-		 	plr.x+4-halfclip,
-		 	plr.y+4-halfclip,
-		 	halfclip,halfclip)
-		 sspr(80,32,16,16,
-		 	plr.x+4-halfclip,
-		 	plr.y+4,
-		 	halfclip,halfclip,false,true)
-		 sspr(80,32,16,16,
-		 	plr.x+4,
-		 	plr.y+4-halfclip,
-		 	halfclip,halfclip,true)
-		 sspr(80,32,16,16,
-		 	plr.x+4,
-		 	plr.y+4,
-		 	halfclip,halfclip,true,true)
+			local ctrx=plr.x+4
+			local ctry=plr.y+4
+
+			--bunch of circles
+			palt(0,false)
+		 for i=0,flr(halfclip/2) do
+		  circ(ctrx,ctry,
+		  	halfclip+i,0)
+		  circ(ctrx-1,ctry,
+		  	halfclip+i,0)
+		 end
 		 palt()
 		end
 	}
@@ -855,8 +848,8 @@ b770777b0ff00ff00ff00ff0b44bb44b0ff00ff00000000000000000000000000000000000000000
 44cccccccccccccccccccc4433d33ccc0000bbbbbbbb000000005555555115555555000033355553000000bbbbbbbbbb00000000000000000000000000000000
 4cccccccccccccccccccccc433333c3c00000b3b3bb000000055555555511555555555003333333300000bbbbbbbbbbb00000000000000000000000000000000
 3cccccccccccccccccccccc3131313330000bbb3b3bb0000055555555551155555555550366663330000bbbbbbbbbbbb00000000000000000000000000000000
-3cccccccccccccccccccccc3c1c1c131000bbbbbbbbbb00055555555555115555555555065555533000bbbbbbbbbbbbb00000000000000000000000000000000
-3cccccccccccccccccccccc3cccccc1c0000b3b3b3bb00005555555555511555555555505555553300bbbbbbbbbbbbbb00000000000000000000000000000000
+3cccccccccccccccccccccc3c1c1c131000bbbbbbbbbb00055555555555115555555555565555533000bbbbbbbbbbbbb00000000000000000000000000000000
+3cccccccccccccccccccccc3cccccc1c0000b3b3b3bb00005555555555511555555555555555553300bbbbbbbbbbbbbb00000000000000000000000000000000
 3cccccccccccccccccccccc3cccccccc000bbb3b3b3bb0005555555555577555555555550000000000bbbbbbbbbbbbbb00000000000000000000000000000000
 3cccccccccccccccccccccc3ccccc3c300bbbbbbbbbbbb00555555555777777555555555000000000bbbbbbbbbbbbbbb00000000000000000000000000000000
 3cccccccccccccccccccccc3cccccc3c000bbbbbbbbbb000555555577777777775555555000000000bbbbbbbbbbbbbbb00000000000000000000000000000000
