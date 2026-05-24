@@ -13,10 +13,10 @@ dialog=nil
 
 state=nil
 states={
-	set=function(self,name)
+	set=function(self,name,...)
 		if state~=self[name] then
 			state=self[name]
-			if(state.init)state:init()
+			if(state.init)state:init(...)
 		end
 	end
 }
@@ -56,9 +56,15 @@ function _init()
 end
 
 function _update()
-	if dialog==nil then
+	if 
+		dialog==nil and
+		state~=states["trans"]
+	then
 		states:set("game")
-	elseif state==states["game"] then
+	elseif 
+		dialog!=nil and
+		state==states["game"] 
+	then
 		states:set("dialog")
 	end
 	
@@ -108,10 +114,19 @@ function new_house(col,row)
 	return {
 		x=col*8,
 		y=row*8,
-		hb=col*
+		hb={
+			x=(col+1)*8,
+			y=(row+3)*8,
+			w=8,h=8
+		},
 		base=(row+3)*8+7,
 		draw=function(self)
 			spr(70,self.x,self.y,3,4)
+		end,
+		interact=function(self)
+			states:set(
+				"trans",
+				{x=75*8,y=41*8})
 		end
 	}
 end
@@ -558,8 +573,9 @@ function game_state()
 		update=function(self)
 			plr:update()
 	
-			cam.x=mid(plr.x+7-64,64,1016-64)
-			cam.y=mid(plr.y+7-64,64,504-64)
+			--todo move this to _update
+			cam.x=mid(plr.x+4-64,64,1016-64)
+			cam.y=mid(plr.y+4-64,64,504-64)
 		end,
 		draw=function(self)
 			draw_map()
@@ -739,29 +755,38 @@ end
 function trans_state()
 	return {
 		clipsize=128,
+		speed=5,
 		shrinking=true,
-		init=function(self)
+		init=function(self,...)
+			local args={...}
+			self.dest=args[1]
+			printh(args[1])
 			self.clipsize=128
 			self.shrinking=true
 		end,
 		update=function(self)
-			if shrinking then
-				clipsize-=1
-				if clipsize<0 then
-					player.pos.x=100
-					player.pos.y=100
-					cam.x=plr.x+7-64
-					cam.y=plr.y+7-64
-					shrinking=false
+			if self.shrinking then
+				self.clipsize-=self.speed
+				if self.clipsize<-self.speed*2 then
+					plr.x=self.dest.x
+					plr.y=self.dest.y
+					cam.x=plr.x+4-64
+					cam.y=plr.y+4-64
+					self.shrinking=false
 				end
 			else
-				clipsize+=1
-				if clipsize>128 then
-					state:set("game")
+				self.clipsize+=self.speed
+				if self.clipsize>128 then
+					states:set("game")
 				end
 			end
 		end,
 		draw=function(self)
+			clip(
+				64-self.clipsize/2,
+				64-self.clipsize/2,
+				self.clipsize,
+				self.clipsize)
 			draw_map()
 			draw_entities()
 		end
