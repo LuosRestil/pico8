@@ -129,7 +129,7 @@ function new_house(col,row)
 				"trans",
 				{x=60,y=110},
 				{x=0,y=0},
-				true)
+				true,false)
 		end
 	}
 end
@@ -211,7 +211,7 @@ function exit(col,row)
 				"trans",
 				{x=61*8,y=39*8},
 				{x=61*8-60,y=39*8-60},
-				false)
+				false,true)
 		end
 	}
 end
@@ -275,18 +275,23 @@ function init_plr()
 		anim=nil,
 		animt=0,
 		animf=1,
+		shadow=true,
 
 		draw=function(self)
 			local pos={x=self.x,y=self.y}
 			--shadow
-			ovalfill(pos.x,pos.y+7,
-				pos.x+7,pos.y+9,5)
+			if self.shadow then
+				ovalfill(
+					pos.x,pos.y+7,
+					pos.x+7,pos.y+9,5)
+			end
+			
 			palt(11,true)
 			palt(0,false)
+			--outline
 			for i=1,15 do
 				pal(i,0)
 			end
-			--outline
 			spr(abs(self.sp),pos.x-1,pos.y,1,1,self.sp<0)
 			spr(abs(self.sp),pos.x+1,pos.y,1,1,self.sp<0)
 			spr(abs(self.sp),pos.x,pos.y-1,1,1,self.sp<0)
@@ -582,9 +587,6 @@ end
 
 --[[
 
-* fix indoor plr shadow /
-		wall overlap from outline
-
 ]]
 -->8
 --states
@@ -781,11 +783,13 @@ function trans_state()
 		speed=8,
 		shrinking=true,
 		freeze_cam=false,
+		plr_shadow=true,
 		init=function(self,...)
 			local args={...}
 			self.dest=args[1]
 			self.cam_dest=args[2]
 			self.freeze_cam=args[3]
+			self.plr_shadow=args[4]
 			self.clipsize=self.maxclip
 			self.shrinking=true
 		end,
@@ -798,6 +802,7 @@ function trans_state()
 					cam.x=self.cam_dest.x
 					cam.y=self.cam_dest.y
 					cam.frozen=self.freeze_cam
+					plr.shadow=self.plr_shadow
 					self.shrinking=false
 				end
 			else
