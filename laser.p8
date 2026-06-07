@@ -5,6 +5,7 @@ rects={}
 
 function _init()
 	plr=init_player()
+	ps=newps()
 	for i=1,10 do
 		add(rects,new_rect())
 	end
@@ -12,6 +13,7 @@ end
 
 function _update()
 	plr:update()
+	ps:update()
 end
 
 function _draw()
@@ -23,7 +25,7 @@ function _draw()
 		local dot=plr.heading.x*torec.x+
 			plr.heading.y*torec.y
 	end
-
+	ps:draw()
 end
 
 function new_rect()
@@ -74,6 +76,7 @@ function init_player()
 			}
 			self.laser=nil
 			zaprect=nil
+			ps.active=false
 			if btn(🅾️) then
 				self.lasering=true
 				local lline={
@@ -97,6 +100,9 @@ function init_player()
 						p=lp
 						pdist=dist(lp,plr)
 						zaprect=rec
+						ps.x=p.x
+						ps.y=p.y
+						ps.active=true
 					end
 				end
 
@@ -192,6 +198,66 @@ function vsub(v1,v2)
 		x=v1.x-v2.x,
 		y=v1.y-v2.y
 	}
+end
+-->8
+function newps()
+	local ps={
+		x=0,
+		y=0,
+		active=false,
+		ps={},
+		t=1,
+		maxp=10,
+		update=function(self)
+			for p in all(self.ps) do
+				if(p.dead)goto continue
+				p.x+=p.vx
+				p.y+=p.vy
+				p.t+=1
+				if p.t>p.lt then
+					p.dead=true
+				end
+				::continue::
+			end
+			
+			if self.active then
+				for i=1,2 do
+					self.ps[self.t]={
+						x=self.x,
+						y=self.y,
+						vx=rnd()*(rnd()<0.5 and -1 or 1)*3,
+						vy=rnd()*(rnd()<0.5 and -1 or 1)*3,
+						t=0,
+						lt=rnd(2)+2,
+						dead=false
+					}
+					self.t+=1
+					if self.t>self.maxp then
+						self.t=1
+					end
+				end
+			end
+		end,
+		draw=function(self)
+			for p in all(self.ps) do
+				if not p.dead then
+					pset(p.x,p.y,7)
+				end
+			end
+		end
+	}
+	for i=1,ps.maxp do
+		ps[i]={
+			x=ps.x,
+			y=ps.y,
+			vx=rnd()*(rnd()<0.5 and -1 or 1)*3,
+			vy=rnd()*(rnd()<0.5 and -1 or 1)*3,
+			t=0,
+			lt=rnd(2)+2,
+			dead=false
+		}
+	end
+	return ps
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
