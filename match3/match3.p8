@@ -103,6 +103,13 @@ end
 --start
 local drips={}
 local strt_mus=63
+local opts={
+	"start game",
+	"how to play",
+	"achievements"
+}
+local opt_idx=1
+local display=nil
 
 function init_start()
 	state="start"
@@ -114,20 +121,38 @@ function update_start()
 		spawn_drip()
 	end
 	update_drips()
+	
+	if display==nil then
+		if btnp(⬆️) then
+			opt_idx-=1
+		elseif btnp(⬇️) then
+			opt_idx+=1
+		end
+		opt_idx=mid(1,#opts,opt_idx)
+	end
+
 	if btnp(🅾️) then
-		init_game()
+		if display then
+			display=nil
+		elseif opt_idx==1 then
+			init_game()
+		else
+			display=opts[opt_idx]
+		end
 	end
 end
 
 function draw_start()
 	draw_drips()
 	local yoff=sin(t()/2)*4
+	
 	printctr(
 		"jools",50+yoff,10,true,olp)
-
-	if flash then
-		printctr(
-			"press 🅾️ to start",73,6)
+		
+	for i,opt in ipairs(opts) do
+		printctr(opt,73+(i-1)*10,
+			i==opt_idx and 9 or 6,
+			false,i==opt_idx and olp or olb)
 	end
 end
 
