@@ -31,10 +31,31 @@ elapsed=0
 last_t=0
 frames=0
 
+achievements={
+	"5x multiplier",
+	"10x multiplier",
+	"1000 gems cleared",
+	"3 colors in one move",
+	"6 colors in one move",
+	"no unmatched swaps",
+	"5+ minute match",
+	"10+ minute match",
+	"15+ minute match"
+}
+achievements_earned={}
+lifetime_gems=0
+
 function _init()
 	cartdata("luosrestil_jools")
 	move_record=dget(0)
 	score_record=dget(1)
+--	lifetime_gems=dget(2)
+--	local achievements_bin=dget(3)
+--	todo decode bin, set achieve
+	for i=1,#achievements do
+		add(achievements_earned,false)
+	end
+	
 	init_start()
 	last_t=time()
 end
@@ -110,10 +131,16 @@ local opts={
 }
 local opt_idx=1
 local display=nil
+local first_start=true
 
 function init_start()
 	state="start"
-	music(strt_mus)
+	if first_start then
+		music(strt_mus)
+	end
+	opt_idx=1
+	drips={}
+	first_start=false
 end
 
 function update_start()
@@ -150,10 +177,14 @@ function draw_start()
 		"jools",50+yoff,10,true,olp)
 		
 	for i,opt in ipairs(opts) do
-		printctr(opt,73+(i-1)*10,
-			i==opt_idx and 9 or 6,
-			false,i==opt_idx and olp or olb)
+		local sel=(i==opt_idx)
+		printctr(opt,
+			73+(i-1)*10,
+			sel and 9 or 6,
+			false,sel and olp or olb)
 	end
+	
+	draw_display()
 end
 
 function spawn_drip()
@@ -182,6 +213,51 @@ function draw_drips()
 				2,2)
 	end
 end
+
+function draw_display()
+	if (display==nil) return
+	
+	rrectfill(10,5,108,118,4,0)
+	rrect(10,5,108,118,4,7)
+	
+	if display=="how to play" then
+		draw_how_to_play()
+	elseif display=="achievements" then
+		draw_achievements()
+	end
+end
+
+function draw_how_to_play()
+	printctr("how to play",10,9,false,olp)
+	print(
+		"- ⬆️⬇️⬅️➡️ to move cursor\n"..
+		"- hold 🅾️ to select gem\n"..
+		"- ⬆️⬇️⬅️➡️ to swap\n"..
+		"  selected gem\n"..
+		"- match 3 colors to clear\n"..
+		"- more than 3 to earn\n"..
+		"  more points!\n"..
+		"- make multiple matches\n"..
+		"  before all the pieces\n"..
+		"  settle for a move score\n"..
+		"  multiplier!\n"..
+		"- lose a point when\n"..
+		"  a swap makes no\n"..
+		"  matches\n"..
+		"- each match replenishes\n"..
+		"  a portion of your timer",
+		
+		15,20,7
+	)
+end
+
+function draw_achievements()
+	printctr("achievements",10,9,false,olp)
+	for i,a in ipairs(achievements) do
+		print("● "..a,15,20+(i-1)*6,
+			achievements_earned[i] and 9 or 6)
+	end
+end
 -->8
 --game
 jgrid={}
@@ -197,10 +273,13 @@ timer=tlimit
 tick=false
 game_mus=0
 chain_len=0
+game_start=time()
+no_match_swap=false
 
 function init_game()
 	state="game"
 	score,mvscore,mul,max_move=0,0,0,0
+	mvclrs={}
 	curr={0,0}
 	selected=nil
 	ps={}
@@ -211,6 +290,8 @@ function init_game()
 	init_jgrid()
 	music(-1)
 	game_mus=rnd({0,40})
+	game_start=time()
+	no_match_swap=false
 end
 
 function init_jgrid()
@@ -274,23 +355,50 @@ function update_game()
 		score+=mvtotal
 		change_pitch(1,-chain_len)
 		mvscore,mul,chain_len=0,0,0
-				
-		if not has_moves() then
-			init_jgrid()
-			score+=50
-			sfx(10)
-			add(txt,new_txt("no moves +50",17,80,true))
+		
+		local total_clrs=0
+		for k,v in pairs(mvclrs) do
+			total_clrs+=1
 		end
+		if total_clrs>=6 then
+			achievements_earned[5]=true
+		elseif total_clrs>=3 then
+			achievements_earned[4]=true
+		end
+		mvclrs={}
 		
 		if timer==0 then
 			if max_move>move_record then
 				move_record=max_move
-				dset(0,move_record)
 			end
 			if score>score_record then
 				score_record=score
-				dset(1,score_record)
 			end
+			
+			local game_end=time()
+			local elapsed=game_end-game_start
+			local mins=elapsed/60
+			if mins>=15 then
+				achievements_earned[7]=true
+			elseif mins>=10 then
+				achievements_earned[8]=true
+			elseif mins>=5 then
+				achievements_earned[9]=true
+			end
+			
+			if not no_match_swap then
+				achievements_earned[6]=true
+			end
+			
+			if lifetime_gems>=1000 then
+				achievements_earned[3]=true
+			end
+			
+			dset(0,move_record)
+			dset(1,score_record)
+			--dset(2,lifetime_gems)
+			--dset(3,bin_encode(achievements_earned)
+			
 			init_end()
 		end
 	end 
@@ -427,8 +535,15 @@ function swap(a,b)
 		add(txt,new_txt("-1",
 			(ax+bx)/2,(ay+by)/2,false,8))
 		score-=1
+		no_match_swap=true
 		sfx(7)
 	else
+		if amatch then
+			mvclrs[aj.sprite]=true
+		end
+		if bmatch then
+			mvclrs[bj.sprite]=true
+		end
 		sfx(0)
 	end
 
@@ -527,6 +642,11 @@ function match()
 	
 	for grp in all(grps) do
 		mul+=1
+		if mul>=10 then
+			achievements_earned[2]=true
+		elseif mul>=5 then
+			achievements_earned[1]=true
+		end
 		local grpscr=(#grp-2)^2
 		mvscore+=grpscr
 		shakestr+=0.1
@@ -547,7 +667,7 @@ function match()
 		sfx(1)
 		chain_len+=1
 		change_pitch(1,1)
-		timer+=#grps
+		timer+=#grps*0.5
 		if(timer>tlimit)timer=tlimit
 	end
 
@@ -849,6 +969,12 @@ end
 bsize=0 --boxsize
 tbsize=100 --target box size
 
+local e_opt_idx=1
+local e_opts={
+	"play again",
+	"main menu"
+}
+
 function init_end()
 	bsize=0
 	state="end"
@@ -861,11 +987,21 @@ function update_end()
 	end
 	update_particles()
 	
-	if
-		bsize>=tbsize and
-		btnp(🅾️)
-	then
-		init_game()
+	if bsize>=tbsize then
+		if btnp(⬆️) then
+			e_opt_idx-=1
+		elseif btnp(⬇️) then
+			e_opt_idx+=1
+		end
+		e_opt_idx=mid(1,#e_opts,e_opt_idx)
+		
+		if btnp(🅾️) then
+			if e_opt_idx==1 then
+				init_game()
+			elseif e_opt_idx==2 then
+				init_start()
+			end
+		end
 	end
 end
 
@@ -925,9 +1061,14 @@ function draw_end()
 		if srcdtxt then
 			printctr(srcdtxt,65,10)
 		end
-		if flash then
-			printctr(
-				"play again? 🅾️",80,6)
+		
+		--menu
+		for i,opt in ipairs(e_opts) do
+			local sel=(i==e_opt_idx)
+			printctr(opt,
+				80+(i-1)*10,
+				sel and 9 or 6,
+				false,sel and olp or olb)
 		end
 	end
 end
@@ -1068,16 +1209,17 @@ function set_note(sf,t,note)
 end
 -------------------------------
 
+function bin_encode(bool_arr)
+	
+end
+
+function bin_decode(num)
+	
+end
 -->8
 --todo
 --[[
-** achievements **
-- multiplier targets
-- total score targets
-- gems destroyed targets
-- gem types in one move targets
-- no misses target
-- game duration target
+
 ]]
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
