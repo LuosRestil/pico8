@@ -49,11 +49,17 @@ function _init()
 	cartdata("luosrestil_jools")
 	move_record=dget(0)
 	score_record=dget(1)
---	lifetime_gems=dget(2)
---	local achievements_bin=dget(3)
---	todo decode bin, set achieve
+	lifetime_gems=dget(2)
+	
+	local achievements_num=dget(3)
+	local achievements_bin=int_to_bin(achievements_num)
 	for i=1,#achievements do
-		add(achievements_earned,false)
+		local digit=sub(
+			achievements_bin,
+			#achievements_bin-(i-1),
+			#achievements_bin-(i-1)
+		)
+		achievements_earned[i]=(digit=="1") and true or false
 	end
 	
 	init_start()
@@ -397,7 +403,7 @@ function update_game()
 			dset(0,move_record)
 			dset(1,score_record)
 			--dset(2,lifetime_gems)
-			--dset(3,bin_encode(achievements_earned)
+			dset(3,int_encode(achievements_earned))
 			
 			init_end()
 		end
@@ -1209,12 +1215,26 @@ function set_note(sf,t,note)
 end
 -------------------------------
 
-function bin_encode(bool_arr)
-	
+--[[
+encode array as number
+lowest array index is lowest
+	significant digit
+]]
+function int_encode(bool_arr)
+	local bin=""
+	for i=1,#bool_arr do
+		bin=(bool_arr[i] and "1" or "0")..bin
+	end
+	return 0+("0b"..bin)
 end
 
-function bin_decode(num)
-	
+function int_to_bin(num)
+	local bin=""
+	for i=1,16 do
+		bin=(num%2~=0 and "1" or "0")..bin
+		num=flr(num/2)
+	end
+	return bin
 end
 -->8
 --todo
