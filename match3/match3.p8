@@ -62,6 +62,8 @@ function _init()
 		achievements_earned[i]=(digit=="1") and true or false
 	end
 	
+	debug=lifetime_gems
+	
 	init_start()
 	last_t=time()
 end
@@ -402,7 +404,7 @@ function update_game()
 			
 			dset(0,move_record)
 			dset(1,score_record)
-			--dset(2,lifetime_gems)
+			dset(2,lifetime_gems)
 			dset(3,int_encode(achievements_earned))
 			
 			init_end()
@@ -654,6 +656,7 @@ function match()
 			achievements_earned[1]=true
 		end
 		local grpscr=(#grp-2)^2
+		lifetime_gems+=#grp
 		mvscore+=grpscr
 		shakestr+=0.1
 		local totx=0
@@ -1239,7 +1242,8 @@ end
 -->8
 --todo
 --[[
-
+additional achievements
+-100,000 gems cleared
 ]]
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
