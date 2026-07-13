@@ -46,6 +46,7 @@ achievements_earned={}
 lifetime_gems=0
 
 function _init()
+	is_30_fps=stat(7)
 	cartdata("luosrestil_jools")
 	move_record=dget(0)
 	score_record=dget(1)
@@ -61,8 +62,6 @@ function _init()
 		)
 		achievements_earned[i]=(digit=="1") and true or false
 	end
-	
-	debug=lifetime_gems
 	
 	init_start()
 	last_t=time()
@@ -676,7 +675,7 @@ function match()
 		sfx(1)
 		chain_len+=1
 		change_pitch(1,1)
-		timer+=#grps*0.5
+		timer+=#grps*0.75
 		if(timer>tlimit)timer=tlimit
 	end
 
@@ -1128,7 +1127,9 @@ end
 txtmeta={
 	draw=function(self)
 		if 
-			self.ttl%2==0 and
+			(
+				self.ttl%1==0 or is_30_fps
+			) and
 			self.rainbow
 		then
 			self.clr=rnd(pclrs)
@@ -1244,6 +1245,7 @@ end
 --[[
 additional achievements
 -100,000 gems cleared
+-maybe remove +15 min game
 ]]
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
