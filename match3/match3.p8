@@ -34,20 +34,25 @@ frames=0
 achievements={
 	"5x multiplier",
 	"10x multiplier",
-	"1000 gems cleared",
+	"1,000 gems cleared",
+	"10,000 gems cleared",
 	"3 colors in one move",
 	"6 colors in one move",
 	"no unmatched swaps",
 	"5+ minute match",
 	"10+ minute match",
-	"15+ minute match"
 }
 achievements_earned={}
 lifetime_gems=0
 
 function _init()
-	is_30_fps=stat(7)
+	low_fps=stat(7)~=60
+	
 	cartdata("luosrestil_jools")
+--	dset(0,0)
+--	dset(1,0)
+--	dset(2,0)
+--	dset(3,0)
 	move_record=dget(0)
 	score_record=dget(1)
 	lifetime_gems=dget(2)
@@ -368,9 +373,9 @@ function update_game()
 			total_clrs+=1
 		end
 		if total_clrs>=6 then
-			achievements_earned[5]=true
+			achievements_earned[6]=true
 		elseif total_clrs>=3 then
-			achievements_earned[4]=true
+			achievements_earned[5]=true
 		end
 		mvclrs={}
 		
@@ -385,19 +390,19 @@ function update_game()
 			local game_end=time()
 			local elapsed=game_end-game_start
 			local mins=elapsed/60
-			if mins>=15 then
-				achievements_earned[7]=true
-			elseif mins>=10 then
-				achievements_earned[8]=true
-			elseif mins>=5 then
+			if mins>=10 then
 				achievements_earned[9]=true
+			elseif mins>=5 then
+				achievements_earned[8]=true
 			end
 			
 			if not no_match_swap then
-				achievements_earned[6]=true
+				achievements_earned[7]=true
 			end
 			
-			if lifetime_gems>=1000 then
+			if lifetime_gems>=10000 then
+				achievements_earned[4]=true
+			elseif lifetime_gems>=1000 then
 				achievements_earned[3]=true
 			end
 			
@@ -1128,7 +1133,7 @@ txtmeta={
 	draw=function(self)
 		if 
 			(
-				self.ttl%1==0 or is_30_fps
+				self.ttl%1==0 or low_fps
 			) and
 			self.rainbow
 		then
@@ -1240,13 +1245,6 @@ function int_to_bin(num)
 	end
 	return bin
 end
--->8
---todo
---[[
-additional achievements
--100,000 gems cleared
--maybe remove +15 min game
-]]
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000a70000000000009999990000000000077770000000000aaaaaaaa000000000009a00000000000000c6000000000000000000000000000000000
