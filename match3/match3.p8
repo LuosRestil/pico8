@@ -406,10 +406,16 @@ function update_game()
 				achievements_earned[3]=true
 			end
 			
+			local ach_earned_int=int_encode(achievements_earned)
+			local prev_ach_earned=dget(3)
+			if ach_earned_int~=prev_ach_earned then
+				--todo show earned msg
+			end
+			
 			dset(0,move_record)
 			dset(1,score_record)
 			dset(2,lifetime_gems)
-			dset(3,int_encode(achievements_earned))
+			dset(3,ach_earned_int)
 			
 			init_end()
 		end
@@ -1255,6 +1261,9 @@ end
 
 - show when a new achievement
 		has been earned
+		
+- new music
+- music selector???
 
 ]]
 __gfx__
