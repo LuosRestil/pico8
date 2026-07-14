@@ -240,7 +240,7 @@ function draw_achievements()
 	printctr("achievements",10,9,false,olp)
 	for i,a in ipairs(achievements) do
 		print("● "..a,15,20+(i-1)*6,
-			achievements_earned[i] and 10 or 6)
+			achievements_earned[i] and 9 or 6)
 	end
 end
 -->8
