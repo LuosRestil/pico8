@@ -19,17 +19,9 @@ max_move=0,0,0,0
 move_record=0
 score_record=0
 
-frame=0
-flash=true
-flashrate=40
-
 state=nil
 
 shakestr=0
-
-elapsed=0
-last_t=0
-frames=0
 
 achievements={
 	"5x multiplier",
@@ -73,24 +65,6 @@ function _init()
 end
 
 function _update60()
-	local curr_t=time()
-	local dt=curr_t-last_t
-	last_t=curr_t
-	elapsed+=dt
-	frames+=1
-	if elapsed>1 then
-		elapsed-=1
---		debug=frames
---		if frames<60 then
---			debug="laaaag!!!"
---		end
-		frames=0
-	end
-
-	frame+=1
-	if frame%flashrate==0 then
-		flash=not flash
-	end
 	update_bg()
 	if state=="start" then
 		update_start()
@@ -258,7 +232,6 @@ function draw_how_to_play()
 		"  matches\n"..
 		"- each match replenishes\n"..
 		"  a portion of your timer",
-		
 		15,20,7
 	)
 end
@@ -267,7 +240,7 @@ function draw_achievements()
 	printctr("achievements",10,9,false,olp)
 	for i,a in ipairs(achievements) do
 		print("● "..a,15,20+(i-1)*6,
-			achievements_earned[i] and 9 or 6)
+			achievements_earned[i] and 10 or 6)
 	end
 end
 -->8
@@ -286,7 +259,9 @@ tick=false
 game_mus=0
 chain_len=0
 game_start=time()
+elapsed=0
 no_match_swap=false
+new_ach_earned=false
 
 function init_game()
 	state="game"
@@ -303,7 +278,9 @@ function init_game()
 	music(-1)
 	game_mus=rnd({0,40})
 	game_start=time()
+	elapsed=0
 	no_match_swap=false
+	new_ach_earned=false
 end
 
 function init_jgrid()
@@ -356,7 +333,8 @@ function update_game()
 	then
 		if not tick then
 			--gems land at start
-			lastt=time()
+			game_start=time()
+			lastt=game_start
 			tick=true
 			music(game_mus,0,3)
 		end
@@ -374,7 +352,8 @@ function update_game()
 		end
 		if total_clrs>=6 then
 			achievements_earned[6]=true
-		elseif total_clrs>=3 then
+		end
+		if total_clrs>=3 then
 			achievements_earned[5]=true
 		end
 		mvclrs={}
@@ -388,11 +367,11 @@ function update_game()
 			end
 			
 			local game_end=time()
-			local elapsed=game_end-game_start
-			local mins=elapsed/60
+			local mins=(game_end-game_start)/60
 			if mins>=10 then
 				achievements_earned[9]=true
-			elseif mins>=5 then
+			end
+			if mins>=5 then
 				achievements_earned[8]=true
 			end
 			
@@ -402,14 +381,15 @@ function update_game()
 			
 			if lifetime_gems>=10000 then
 				achievements_earned[4]=true
-			elseif lifetime_gems>=1000 then
+			end
+			if lifetime_gems>=1000 then
 				achievements_earned[3]=true
 			end
 			
 			local ach_earned_int=int_encode(achievements_earned)
 			local prev_ach_earned=dget(3)
 			if ach_earned_int~=prev_ach_earned then
-				--todo show earned msg
+				new_ach_earned=true
 			end
 			
 			dset(0,move_record)
@@ -424,7 +404,9 @@ function update_game()
 	
 	if tick then
 		local currt=time()
-		timer-=currt-lastt
+		local dt=currt-lastt
+		timer-=dt
+		elapsed+=dt
 		lastt=currt
 	end
 	if (timer<0) timer=0
@@ -436,7 +418,7 @@ function draw_game()
 	draw_particles()
 	if tick then
 		print_score()
-		print_timer()
+		print_time()
 		draw_timer()
 	end
 end
@@ -660,11 +642,14 @@ function match()
 	
 	for grp in all(grps) do
 		mul+=1
-		if mul>=10 then
-			achievements_earned[2]=true
-		elseif mul>=5 then
+		
+		if mul>=5 then
 			achievements_earned[1]=true
 		end
+		if mul>=10 then
+			achievements_earned[2]=true
+		end
+		
 		local grpscr=(#grp-2)^2
 		lifetime_gems+=#grp
 		mvscore+=grpscr
@@ -867,9 +852,13 @@ function print_score()
 	print(olp.."score: "..score,3,3,9)
 end
 
-function print_timer()
-	local ceilt=ceil(timer)
-	print(olp.."time: "..ceilt,80,3,9)
+function print_time()
+	local mins=flr(elapsed/60)
+	local secs=flr(elapsed%60)
+	local mins_str=(mins<10 and "0" or "")..mins
+	local secs_str=(secs<10 and "0" or "")..secs
+	local time_str=mins_str..":"..secs_str
+	print(olp.."time: "..time_str,80,3,9)
 end
 
 function draw_timer()
@@ -994,11 +983,20 @@ local e_opts={
 	"main menu"
 }
 
+local nae={
+	txt="new achievement earned!",
+	x=130,y=120,
+	speed=0.5
+}
+
+
 function init_end()
 	bsize=0
 	state="end"
 	e_opt_idx=1
 	music(63)
+	nae.x=130
+	nae.w=txtw(nae.txt,false)
 end
 
 function update_end()
@@ -1021,6 +1019,11 @@ function update_end()
 			elseif e_opt_idx==2 then
 				init_start()
 			end
+		end
+		
+		nae.x-=nae.speed
+		if nae.x==-nae.w then
+			nae.x=130
 		end
 	end
 end
@@ -1089,6 +1092,11 @@ function draw_end()
 				80+(i-1)*10,
 				sel and 9 or 6,
 				false,sel and olp or olb)
+		end
+		
+		if new_ach_earned then
+			print(
+				olp..nae.txt,nae.x,nae.y,10)
 		end
 	end
 end
@@ -1256,12 +1264,6 @@ end
 --todo
 --[[
 
-- delete timer
-- or repurpose for elapsed time
-
-- show when a new achievement
-		has been earned
-		
 - new music
 - music selector???
 
